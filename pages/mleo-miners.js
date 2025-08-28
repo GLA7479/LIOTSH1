@@ -1257,7 +1257,7 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
     <Layout>
       <div
         ref={wrapRef}
-        className="flex flex-col items-center justify-start bg-gray-900 text-white min-h-screen w-full relative overflow-hidden select-none"
+        className="flex flex-col items-center justify-start bg-gray-900 text-white min-h-[100dvh] w-full relative overflow-hidden select-none pt-4 pb-[calc(env(safe-area-inset-bottom)+16px)]"
       >
         {/* Landscape overlay on mobile */}
         {isMobileLandscape && (
@@ -1399,7 +1399,7 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
         )}
 
         {/* ===== Title ===== */}
-        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight mt-10 mb-4 leading-none">
+        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight mt-6 mb-4 leading-none">
           MLEO Miners — v5.8
         </h1>
 
@@ -1407,7 +1407,7 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
         <div
           id="miners-canvas-wrap"
           className="relative w-full border border-slate-700 rounded-2xl overflow-hidden shadow-2xl mt-6"
-          style={{ maxWidth: isDesktop ? "1024px" : "680px", aspectRatio: isDesktop ? "4 / 3" : "9 / 16" }}
+          style={{ maxWidth: isDesktop ? "1024px" : "680px", aspectRatio: isDesktop ? "4 / 3" : undefined }}
         >
           <canvas id="miners-canvas" ref={canvasRef} className="w-full h-full block touch-none select-none" />
 
@@ -1554,6 +1554,9 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
           )}
         </div>
 
+        {/* Spacer to avoid iOS toolbar cropping */}
+        <div className="w-full h-[calc(env(safe-area-inset-bottom)+12px)]" />
+
         {/* Offline COLLECT overlay */}
         {showCollect && (
           <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/85 px-6 text-center">
@@ -1604,7 +1607,7 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
           </div>
         )}
 
-        {/* Diamond Rewards Modal */}
+        {/* Diamond Rewards Modal (smaller; no bottom note) */}
         {showDiamondInfo && (
           <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/80 px-4">
             <div className="bg-white/10 backdrop-blur rounded-2xl p-5 border border-white/20 shadow-2xl max-w-sm w-[92%] sm:w-[420px] text-left overflow-auto max-h-[85vh]">
@@ -1679,5 +1682,6 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
       </div>
     </Layout>
   );
-}
+} 
 // === END PART 6 ===
+
