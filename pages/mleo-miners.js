@@ -1252,12 +1252,30 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
  
 
 // === START PART 6 ===
+  // ——— iOS detection (to size the canvas a bit shorter on iPhone/iPad) ———
+  const [isIOS, setIsIOS] = useState(false);
+  useEffect(() => {
+    try {
+      const ua = navigator.userAgent || "";
+      const isiOS =
+        /iP(hone|ad|od)/.test(ua) ||
+        ((/Macintosh/.test(ua) || /Mac OS X/.test(ua)) && "ontouchend" in document);
+      setIsIOS(isiOS);
+    } catch {}
+  }, []);
+
   // ===== Render =====
   return (
     <Layout>
       <div
         ref={wrapRef}
-        className="flex flex-col items-center justify-start bg-gray-900 text-white min-h-[100dvh] w-full relative overflow-hidden select-none pt-[calc(env(safe-area-inset-top)+8px)] pb-[calc(env(safe-area-inset-bottom)+8px)]"
+        className="
+          flex flex-col items-center justify-start
+          bg-gray-900 text-white
+          min-h-[100dvh] w-full relative overflow-hidden select-none
+          pt-[calc(env(safe-area-inset-top)+8px)]
+          pb-[calc(env(safe-area-inset-bottom)+24px)]
+        "
       >
         {/* Landscape overlay on mobile */}
         {isMobileLandscape && (
@@ -1369,10 +1387,10 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
                     const gain = Math.round(base * 0.50); // 50%
                     s.gold += gain; setUi(u => ({ ...u, gold: s.gold }));
 
-                    // קובע קולדאון 10 דקות — נשמר גם ב-state וגם ב-LS
+                    // 10m cooldown
                     const until = Date.now() + 10*60*1000;
-                    s.adCooldownUntil = until;     // מקור האמת
-                    setAdCooldownUntil(until);      // ל־UI
+                    s.adCooldownUntil = until;
+                    setAdCooldownUntil(until);
                     try {
                       const raw = localStorage.getItem(LS_KEY);
                       const data = raw ? JSON.parse(raw) : {};
@@ -1399,7 +1417,7 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
         )}
 
         {/* ===== Title ===== */}
-        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight mt-2 mb-3 leading-none">
+        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight mt-4 mb-4 leading-none">
           MLEO Miners — v5.8
         </h1>
 
@@ -1409,7 +1427,9 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
           className="relative w-full border border-slate-700 rounded-2xl overflow-hidden shadow-2xl mt-6"
           style={{
             maxWidth: isDesktop ? "1024px" : "680px",
-            aspectRatio: isDesktop ? "4 / 3" : (isPortrait ? "9 / 16" : "4 / 3"),
+            // Desktop: keep aspect ratio; Mobile: fixed dvh height; iOS slightly shorter to avoid Safari bars
+            height: isDesktop ? undefined : (isPortrait ? (isIOS ? "70dvh" : "78dvh") : "70dvh"),
+            aspectRatio: isDesktop ? "4 / 3" : undefined,
           }}
         >
           <canvas id="miners-canvas" ref={canvasRef} className="w-full h-full block touch-none select-none" />
@@ -1417,7 +1437,7 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
           {/* ==== TOP HUD ==== */}
           <div className="absolute left-1/2 -translate-x-1/2 top-1 z-[30] w-[calc(100%-16px)] max-w-[980px]">
             <div className="flex gap-2 flex-wrap justify-center items-center text-sm">
-              {/* Gold + ring (using addProgress visually) */}
+              {/* Gold + ring */}
               <div className="px-2 py-1 bg-black/60 rounded-lg shadow flex items-center gap-2">
                 <div
                   className="relative w-8 h-8 rounded-full grid place-items-center"
@@ -1447,13 +1467,13 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
                 <span className="opacity-80">/3</span>
               </button>
 
-              <div className="px-2 py-1 bg-black/60 rounded-lg shadow">{phaseLabel}</div>
+              <div className="px-2 py-1 bg-black/60 rounded-lg shadow">{`⏳ ${(_getPhaseInfo(stateRef.current, Date.now()).intervalSec)}s gifts`}</div>
 
               <div className="flex items-center gap-3 ml-2">
                 <div
                   className="relative w-8 h-8 rounded-full grid place-items-center"
                   style={circleStyle(giftProgress, true)}
-                  title={phaseLabel}
+                  title={`⏳ ${(_getPhaseInfo(stateRef.current, Date.now()).intervalSec)}s gifts`}
                 >
                   <div className="w-6 h-6 rounded-full bg-black/70 grid place-items-center text-[10px] font-extrabold">🎁</div>
                 </div>
@@ -1607,7 +1627,7 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
           </div>
         )}
 
-        {/* Diamond Rewards Modal (smaller; no bottom note) */}
+        {/* Diamond Rewards Modal */}
         {showDiamondInfo && (
           <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/80 px-4">
             <div className="bg-white/10 backdrop-blur rounded-2xl p-5 border border-white/20 shadow-2xl max-w-sm w-[92%] sm:w-[420px] text-left overflow-auto max-h-[85vh]">
@@ -1682,5 +1702,5 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
       </div>
     </Layout>
   );
-}
+} 
 // === END PART 6 ===
