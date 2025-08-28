@@ -1479,7 +1479,7 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
           <canvas id="miners-canvas" ref={canvasRef} className="w-full h-full block touch-none select-none" />
 
           {/* ==== TOP HUD ==== */}
-<div className="absolute left-1/2 -translate-x-1/2 z-[30] w-[calc(100%-16px)] max-w-[980px] top-6 sm:top-8 md:top-16">
+<div className="absolute left-1/2 -translate-x-1/2 z-[30] w-[calc(100%-16px)] max-w-[980px] top-6 sm:top-8 md:top-20">
 
             <div className="flex gap-2 flex-wrap justify-center items-center text-sm">
               {/* Gold + ring */}
