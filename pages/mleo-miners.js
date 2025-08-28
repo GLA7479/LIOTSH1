@@ -387,12 +387,15 @@ function setupCanvasAndLoop(cnv){
 
     let targetW, targetH;
     if (isFS) {
-      // במסך מלא: מבססים על viewport האמיתי כדי לא לחתוך תחתית
+      // במסך מלא: גובה מלא אמיתי + עדכון גם ל־wrapper
       targetW = Math.min(window.innerWidth || 360, 1024);
       targetH = Math.max(420, (window.innerHeight || 600) - 1); // -1 למניעת גלילה מיותרת
+      const wrap = cnv.parentElement;
+      if (wrap) wrap.style.height = `${window.innerHeight}px`;
     } else {
       // מצב רגיל: לפי האלמנט העוטף
       const wrap = cnv.parentElement;
+      if (wrap) wrap.style.height = ""; // נקה גובה ידני ממסך מלא
       const rect = wrap?.getBoundingClientRect();
       const innerW = Math.max(320, Math.floor(wrap?.clientWidth  ?? rect?.width  ?? 360));
       const innerH = Math.max(420, Math.floor(wrap?.clientHeight ?? rect?.height ?? 600));
@@ -507,6 +510,283 @@ function setupCanvasAndLoop(cnv){
     window.removeEventListener("mouseup", onUp);
     // לא ניתן להסיר מאזינים אנונימיים; נשאיר כך כדי לא לשבור.
   };
+}
+
+// ----- גיאומטריה -----
+const PILL_H = 36; // גובה כפתור ADD
+function boardRect(){
+  const c = canvasRef.current;
+  return { x:PADDING, y:PADDING, w:(c?.clientWidth||0)-PADDING*2, h:(c?.clientHeight||0)-PADDING*2 };
+}
+function laneRect(lane){
+  const b = boardRect();
+  const h = b.h * 0.18;
+  const centers = [0.375,0.525,0.675,0.815];
+  const centerY = b.y + b.h * centers[lane];
+  const y = Math.max(b.y, Math.min(centerY - h*0.5, b.y + b.h - h));
+  return { x:b.x, y, w:b.w, h };
+}
+function rockWidth(L){ return Math.min(L.w*0.16, Math.max(50, L.h*0.64)); }
+function slotRect(lane,slot){
+  const L = laneRect(lane);
+  const rw = rockWidth(L);
+  const cellW = (L.w - rw) / SLOTS_PER_LANE;
+  return { x:L.x + slot*cellW, y:L.y, w:cellW - 4, h:L.h };
+}
+function rockRect(lane){
+  const L = laneRect(lane);
+  const rw = rockWidth(L);
+  const y = L.y + L.h * 0.06;
+  const h = L.h * 0.88;
+  return { x:L.x + L.w - rw - 4, y, w:rw, h };
+}
+function pos(e){
+  const r = canvasRef.current?.getBoundingClientRect();
+  return { x: e.clientX - (r?.left||0), y: e.clientY - (r?.top||0) };
+}
+function pointInRect(x,y,r){ return x>=r.x && x<=r.x+r.w && y>=r.y && y<=r.y+r.h; }
+function pillRect(lane,slot){
+  const r = slotRect(lane,slot);
+  const pw = r.w * 0.36;
+  const ph = Math.min(PILL_H, r.h*0.22);
+  const px = r.x + (r.w - pw)/2;
+  const py = r.y + r.h*0.5 - ph/2;
+  return { x:px, y:py, w:pw, h:ph };
+}
+function pickPill(x,y){
+  const s = stateRef.current; if (!s) return null;
+  for (let l=0; l<LANES; l++){
+    for (let k=0; k<SLOTS_PER_LANE; k++){
+      if (s.lanes[l].slots[k]) continue;
+      const pr = pillRect(l,k);
+      if (pointInRect(x,y,pr)) return { lane:l, slot:k };
+    }
+  }
+  return null;
+}
+function pickSlot(x,y){
+  for (let l=0; l<LANES; l++){
+    for (let k=0; k<SLOTS_PER_LANE; k++){
+      const r = slotRect(l,k);
+      if (pointInRect(x,y,r)) return { lane:l, slot:k };
+    }
+  }
+  return null;
+}
+function pickMiner(x,y){
+  const s = stateRef.current; if (!s) return null;
+  for (let l=0; l<LANES; l++){
+    for (let k=0; k<SLOTS_PER_LANE; k++){
+      const cell = s.lanes[l].slots[k]; if(!cell) continue;
+      const r = slotRect(l,k);
+      const cx = r.x + r.w*0.52;
+      const cy = r.y + r.h*0.56;
+      const rad = Math.min(r.w,r.h)*0.33;
+      const dx=x-cx, dy=y-cy;
+      if (dx*dx+dy*dy < rad*rad) return { id:cell.id, x:cx, y:cy };
+    }
+  }
+  return null;
+}
+
+// ----- ציור -----
+function drawBg(ctx,b){
+  const img = getImg(IMG_BG);
+  if (img.complete && img.naturalWidth>0) {
+    const iw=img.naturalWidth, ih=img.naturalHeight;
+    const ir=iw/ih, br=b.w/b.h;
+    let dw,dh; if (br>ir){ dw=b.w; dh=b.w/ir; } else { dh=b.h; dw=b.h*ir; }
+    const dx=b.x+(b.w-dw)/2, dy=b.y+(b.h-dh)/2;
+    ctx.drawImage(img,dx,dy,dw,dh);
+  } else {
+    const g=ctx.createLinearGradient(0,b.y,0,b.y+b.h);
+    g.addColorStop(0,"#0b1220"); g.addColorStop(1,"#0c1526");
+    ctx.fillStyle=g; ctx.fillRect(b.x,b.y,b.w,b.h);
+  }
+}
+function drawRock(ctx,rect,rock){
+  const pct = Math.max(0, rock.hp/rock.maxHp);
+  const scale = 0.35 + 0.65*pct;
+  const img = getImg(IMG_ROCK);
+  const pad=6, fullW=rect.w-pad*2, fullH=rect.h-pad*2;
+  const rw=fullW*scale, rh=fullH*scale;
+  const cx=rect.x+rect.w/2, cy=rect.y+rect.h/2;
+  const dx=cx-rw/2, dy=cy-rh/2;
+  if (img.complete && img.naturalWidth>0) ctx.drawImage(img,dx,dy,rw,rh);
+  else { ctx.fillStyle="#6b7280"; ctx.fillRect(dx,dy,rw,rh); }
+  // HP bar
+  const bx=rect.x+pad, by=rect.y+4, barW=fullW, barH=6;
+  ctx.fillStyle="#0ea5e9"; ctx.fillRect(bx,by,barW*pct,barH);
+  ctx.strokeStyle="#082f49"; ctx.lineWidth=1; ctx.strokeRect(bx,by,barW,barH);
+  ctx.fillStyle="#e5e7eb"; ctx.font="bold 11px system-ui";
+  ctx.fillText(`Rock ${rock.idx+1}`, bx, by+16);
+}
+function drawMiner(ctx,lane,slot,m){
+  const r=slotRect(lane,slot);
+  const cx=r.x+r.w*0.52, cy=r.y+r.h*0.56;
+  const w=Math.min(r.w,r.h)*0.84;
+  const img=getImg(IMG_MINER);
+  if (img.complete && img.naturalWidth>0) {
+    const frame=Math.floor(((stateRef.current?.anim?.t)||0)*8)%4;
+    const sw=img.width/4, sh=img.height;
+    ctx.drawImage(img, frame*sw,0,sw,sh, cx-w/2,cy-w/2, w,w);
+  } else {
+    ctx.fillStyle="#22c55e"; ctx.beginPath(); ctx.arc(cx,cy,w*0.35,0,Math.PI*2); ctx.fill();
+  }
+  // level
+  ctx.fillStyle="rgba(0,0,0,.6)"; ctx.fillRect(cx-w*0.5, cy-w*0.62, 30, 16);
+  ctx.fillStyle="#fff"; ctx.font="bold 10px system-ui"; ctx.fillText(m.level, cx-w*0.5+9, cy-w*0.62+12);
+}
+function drawPill(ctx,x,y,w,h,label,enabled=true){
+  const g=ctx.createLinearGradient(x,y,x,y+h);
+  if (enabled){ g.addColorStop(0,"#fef08a"); g.addColorStop(1,"#facc15"); }
+  else{ g.addColorStop(0,"#475569"); g.addColorStop(1,"#334155"); }
+  ctx.fillStyle=g; ctx.strokeStyle=enabled?"#a16207":"#475569"; ctx.lineWidth=1.5;
+  roundRect(ctx,x,y,w,h,h/2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle=enabled?"#111827":"#cbd5e1";
+  ctx.font=`bold ${Math.max(12, Math.floor(h*0.45))}px system-ui`; ctx.textAlign="center"; ctx.textBaseline="middle";
+  ctx.fillText(label, x+w/2, y+h/2);
+}
+function roundRect(ctx,x,y,w,h,r){
+  const rr=Math.min(r,h/2,w/2);
+  ctx.beginPath();
+  ctx.moveTo(x+rr,y);
+  ctx.arcTo(x+w,y,x+w,y+h,rr);
+  ctx.arcTo(x+w,y+h,x,y+h,rr);
+  ctx.arcTo(x,y+h,x,y,rr);
+  ctx.arcTo(x,y,x+w,y,rr);
+  ctx.closePath();
+}
+
+function draw(){
+  const c = canvasRef.current; if (!c) return;
+  const ctx = c.getContext("2d"); if (!ctx) return;
+  const s = stateRef.current; if (!s) return;
+  const b = boardRect();
+
+  drawBg(ctx,b);
+
+  // יעד פוטנציאלי תחת הסמן (אם גוררים)
+  let hoverDrop = null;
+  if (dragRef.current.active) {
+    const px = (dragRef.current.x ?? 0) + (dragRef.current.ox ?? 0);
+    const py = (dragRef.current.y ?? 0) + (dragRef.current.oy ?? 0);
+    hoverDrop = pickSlot(px, py);
+  }
+
+  // ציור פילי ADD, סלעים וכלבים — מסתירים את הכלב הנגרר
+  for (let l=0; l<LANES; l++){
+    for (let k=0; k<SLOTS_PER_LANE; k++){
+      const cell = s.lanes[l].slots[k];
+      if (!cell) {
+        const pr = pillRect(l,k);
+        const canAfford = (s.gold ?? 0) >= (s.spawnCost ?? 0) && countMiners(s) < MAX_MINERS;
+        drawPill(ctx, pr.x, pr.y, pr.w, pr.h, "ADD", canAfford);
+      }
+    }
+    drawRock(ctx, rockRect(l), s.lanes[l].rock);
+    for (let k=0; k<SLOTS_PER_LANE; k++){
+      const cell = s.lanes[l].slots[k]; if (!cell) continue;
+      const m = s.miners[cell.id]; if (!m) continue;
+      if (dragRef.current.active && dragRef.current.id === m.id) continue; // הסתרת המקור בזמן גרירה
+      drawMiner(ctx,l,k,m);
+    }
+  }
+
+  // היילייט יעד
+  if (dragRef.current.active && hoverDrop) {
+    const r = slotRect(hoverDrop.lane, hoverDrop.slot);
+    const ctx2 = ctx;
+    ctx2.save();
+    ctx2.strokeStyle = "rgba(250,204,21,.9)";
+    ctx2.lineWidth = 3;
+    roundRect(ctx2, r.x+4, r.y+4, r.w-8, r.h-8, 12);
+    ctx2.stroke();
+    ctx2.restore();
+  }
+
+  // GHOST של הכלב הנגרר + צל
+  if (dragRef.current.active) {
+    const id = dragRef.current.id;
+    const m  = s.miners[id];
+    if (m) {
+      const gx = (dragRef.current.x ?? 0) + (dragRef.current.ox ?? 0);
+      const gy = (dragRef.current.y ?? 0) + (dragRef.current.oy ?? 0);
+      const r0 = slotRect(m.lane, m.slot);
+      const w  = Math.min(r0.w, r0.h) * 0.84;
+
+      // צל
+      ctx.save();
+      ctx.globalAlpha = 0.35;
+      ctx.fillStyle = "#000";
+      ctx.beginPath();
+      ctx.ellipse(gx, gy + w*0.40, w*0.55, w*0.18, 0, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+
+      // הדמות
+      ctx.save();
+      ctx.globalAlpha = 0.9;
+      const img=getImg(IMG_MINER);
+      if (img.complete && img.naturalWidth>0) {
+        const frame=Math.floor(((stateRef.current?.anim?.t)||0)*8)%4;
+        const sw=img.width/4, sh=img.height;
+        const ww = w*1.05;
+        ctx.drawImage(img, frame*sw,0,sw,sh, gx-ww/2, gy-ww/2, ww, ww);
+      } else {
+        ctx.fillStyle="#22c55e";
+        ctx.beginPath(); ctx.arc(gx,gy,(w*0.35)*1.05,0,Math.PI*2); ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+}
+
+// ----- לוגיקת tick בסיסית -----
+function tick(dt){
+  const s = stateRef.current; if (!s) return;
+  s.anim.t += dt;
+  s.paused = gamePaused || showIntro || showCollect;
+  const now = Date.now();
+  if (s.paused){ s.lastSeen = now; return; }
+
+  for (let l=0; l<LANES; l++){
+    let dps = 0;
+    for (let k=0; k<SLOTS_PER_LANE; k++){
+      const cell = s.lanes[l].slots[k]; if (!cell) continue;
+      const m = s.miners[cell.id]; if (!m) continue;
+      dps += minerDps(m.level, s.dpsMult||1);
+    }
+    const rock = s.lanes[l].rock;
+    rock.hp -= dps * dt;
+    if (rock.hp <= 0){
+      const gain = Math.floor(rock.maxHp * GOLD_FACTOR * (s.goldMult||1));
+      s.gold += gain; setUi(u => ({ ...u, gold:s.gold }));
+      addPlayerScorePoints(s, gain);
+      s.lanes[l].rockCount += 1;
+      s.lanes[l].rock = newRock(l, s.lanes[l].rockCount);
+      safeSave();
+    }
+  }
+
+  // gifts timer → מכין את כפתור 🎁
+  if (!s.giftReady) {
+    if ((s.giftNextAt || 0) <= Date.now()) {
+      s.giftReady = true;
+      setGiftReadyFlag(true);
+    }
+  }
+
+  // bank-dog: צבירה אונליין והפצה אם יש מקום
+  if (s.autoDogLastAt == null) s.autoDogLastAt = Date.now();
+  const elapsedSinceDog = Date.now() - (s.autoDogLastAt || Date.now());
+  if (elapsedSinceDog >= (typeof DOG_INTERVAL_SEC !== "undefined" ? DOG_INTERVAL_SEC : 900) * 1000) {
+    accrueBankDogsByElapsed(s, elapsedSinceDog); // PART 4
+  }
+  tryDistributeBankDog(s); // PART 4
+
+  finalizeDailyRewardOncePerTick();
+  s.lastSeen = now;
 }
 // === END PART 3 ===
 
@@ -997,10 +1277,10 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
  
 
 // === START PART 6 ===
-  // ——— iOS detection (to size the canvas a bit shorter on iPhone/iPad) ———
+  // ——— iOS detection ———
   const [isIOS, setIsIOS] = useState(false);
 
-  // ——— Track fullscreen state locally (so we can change layout rules) ———
+  // ——— Track fullscreen state (משמש רק לעיצוב) ———
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
@@ -1027,9 +1307,14 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
           flex flex-col items-center justify-start
           bg-gray-900 text-white
           min-h-[100dvh] w-full relative overflow-hidden select-none
-          pt-[calc(env(safe-area-inset-top)+12px)]   /* ↑ קצת יותר מרווח מהחלק העליון */
+          pt-[calc(env(safe-area-inset-top)+8px)]
           pb-[calc(env(safe-area-inset-bottom)+24px)]
         "
+        // במסך מלא: מבטלים padding כדי שהקאנבס יישב הכי גבוה וימלא את כל הגובה
+        style={{
+          paddingTop: isFullscreen ? 0 : undefined,
+          paddingBottom: isFullscreen ? 0 : undefined,
+        }}
       >
         {/* Landscape overlay on mobile */}
         {isMobileLandscape && (
@@ -1084,6 +1369,30 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
               >
                 HOW TO PLAY
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* HOW TO modal */}
+        {showHowTo && (
+          <div className="fixed inset-0 z-[10000] bg-black/70 flex items-center justify-center p-4">
+            <div className="bg-white text-slate-900 max-w-lg w-full rounded-2xl p-5 shadow-2xl">
+              <h2 className="text-2xl font-extrabold mb-3">How to Play</h2>
+              <ul className="list-disc pl-5 space-y-2 text-sm">
+                <li>Merge two same-level miners to upgrade.</li>
+                <li>Breaking rocks yields coins that scale with rock level.</li>
+                <li>Regular Gift = <b>10%</b> of the multi-lane reward.</li>
+                <li>Ad Gift (after video) = <b>50%</b> of the multi-lane reward.</li>
+                <li>Diamond Chest (3💎) gives large coin multipliers or dog levels.</li>
+              </ul>
+              <div className="flex justify-end mt-4">
+                <button
+                  onClick={() => setShowHowTo(false)}
+                  className="px-4 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800"
+                >
+                  Got it
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -1147,9 +1456,11 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
         )}
 
         {/* ===== Title ===== */}
-        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight mt-1 mb-3 leading-none">
-          MLEO Miners — v5.8
-        </h1>
+        {!isFullscreen && (
+          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight mt-1 mb-4 leading-none">
+            MLEO Miners — v5.8
+          </h1>
+        )}
 
         {/* ===== Canvas wrapper ===== */}
         <div
@@ -1157,18 +1468,18 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
           className="relative w-full border border-slate-700 rounded-2xl overflow-hidden shadow-2xl mt-1"
           style={{
             maxWidth: isDesktop ? "1024px" : "680px",
-            // כשהמסך **לא** מלא במובייל – נשתמש ב-height מחושב.
-            // במסך מלא – לא קובעים height כאן; PART 3 קובע גובה מדויק ב-JS.
             height: isDesktop
               ? undefined
-              : (isFullscreen ? undefined : `calc(100svh - 72px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`),
+              : (isFullscreen
+                  ? "100vh" // במסך מלא – גובה מלא אמיתי
+                  : `calc(100svh - 65px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`),
             aspectRatio: isDesktop ? "4 / 3" : undefined,
           }}
         >
           <canvas id="miners-canvas" ref={canvasRef} className="w-full h-full block touch-none select-none" />
 
           {/* ==== TOP HUD ==== */}
-          <div className="absolute left-1/2 -translate-x-1/2 top-4 z-[30] w-[calc(100%-16px)] max-w-[980px]">
+          <div className="absolute left-1/2 -translate-x-1/2 top-1 z-[30] w-[calc(100%-16px)] max-w-[980px]">
             <div className="flex gap-2 flex-wrap justify-center items-center text-sm">
               {/* Gold + ring */}
               <div className="px-2 py-1 bg-black/60 rounded-lg shadow flex items-center gap-2">
