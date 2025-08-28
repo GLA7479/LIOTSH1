@@ -1399,14 +1399,14 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
         )}
 
         {/* ===== Title ===== */}
-        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight mt-10 mb-4 leading-none">
+        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight mt-4 mb-4 leading-none">
           MLEO Miners — v5.8
         </h1>
 
         {/* ===== Canvas wrapper ===== */}
         <div
           id="miners-canvas-wrap"
-          className="relative w-full border border-slate-700 rounded-2xl overflow-hidden shadow-2xl mt-6"
+          className="relative w-full border border-slate-700 rounded-2xl overflow-hidden shadow-2xl"
           style={{ maxWidth: isDesktop ? "1024px" : "680px", aspectRatio: isDesktop ? "4 / 3" : "9 / 16" }}
         >
           <canvas id="miners-canvas" ref={canvasRef} className="w-full h-full block touch-none select-none" />
