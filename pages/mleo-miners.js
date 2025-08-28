@@ -1307,6 +1307,10 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
 // === START PART 6 ===
   // ——— iOS detection (to size the canvas a bit shorter on iPhone/iPad) ———
   const [isIOS, setIsIOS] = useState(false);
+
+  // ——— Track fullscreen state locally (so we can change layout rules) ———
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
   useEffect(() => {
     try {
       const ua = navigator.userAgent || "";
@@ -1315,6 +1319,11 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
         ((/Macintosh/.test(ua) || /Mac OS X/.test(ua)) && "ontouchend" in document);
       setIsIOS(isiOS);
     } catch {}
+
+    const onFS = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onFS);
+    onFS(); // init
+    return () => document.removeEventListener("fullscreenchange", onFS);
   }, []);
 
   // ===== Render =====
@@ -1480,10 +1489,11 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
           className="relative w-full border border-slate-700 rounded-2xl overflow-hidden shadow-2xl mt-1"
           style={{
             maxWidth: isDesktop ? "1024px" : "680px",
-            // Mobile: fill dynamic viewport height (minus header + safe areas); Desktop keeps aspect ratio
+            // כשהמסך **לא** מלא במובייל – נשתמש ב-height מחושב.
+            // במסך מלא – לא קובעים height כאן; PART 3 קובע גובה מדויק ב-JS.
             height: isDesktop
               ? undefined
-              : `calc(100dvh - 65px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`,
+              : (isFullscreen ? undefined : `calc(100dvh - 65px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`),
             aspectRatio: isDesktop ? "4 / 3" : undefined,
           }}
         >
