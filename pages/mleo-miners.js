@@ -215,7 +215,7 @@ export default function MleoMiners() {
 
 
 // === START PART 3 ===
-// Init state + קנבס + ציור + לולאת משחק (ללא כפילויות שמות)
+// Init state + קנבס + ציור + לולאת משחק (שיפור UX של גרירה)
 
 useEffect(() => {
   theStateFix_maybeMigrateLocalStorage();
@@ -242,7 +242,6 @@ useEffect(() => {
       const data = JSON.parse(raw);
       if (typeof data.adCooldownUntil === "number") {
         setAdCooldownUntil(data.adCooldownUntil);
-        // שמור גם בעותק ה-state הזמין
         if (stateRef.current) stateRef.current.adCooldownUntil = data.adCooldownUntil;
       }
     }
@@ -385,13 +384,21 @@ function setupCanvasAndLoop(cnv){
   window.addEventListener("resize", resize);
   resize();
 
-  // קלט — גרירה ומיקום
+  // קלט — גרירה ומיקום (UX משופר)
   const onDown = (e) => {
     if (isMobileLandscape || gamePaused || showIntro || showCollect) return;
     const p = pos(e);
     const hit = pickMiner(p.x,p.y);
     if (hit) {
-      dragRef.current = { active:true, id:hit.id, ox:p.x-hit.x, oy:p.y-hit.y };
+      // שמור offset יחסית למרכז הדמות
+      dragRef.current = {
+        active:true,
+        id: hit.id,
+        ox: p.x - hit.x,
+        oy: p.y - hit.y,
+        x: p.x - (p.x - hit.x), // התחלה בנקודת המרכז
+        y: p.y - (p.y - hit.y),
+      };
       return;
     }
     const pill = pickPill(p.x,p.y);
@@ -402,7 +409,7 @@ function setupCanvasAndLoop(cnv){
     const p = pos(e);
     dragRef.current.x = p.x - dragRef.current.ox;
     dragRef.current.y = p.y - dragRef.current.oy;
-    draw();
+    draw(); // רענון מיידי
   };
   const onUp = (e) => {
     if (!dragRef.current.active) return;
@@ -426,8 +433,9 @@ function setupCanvasAndLoop(cnv){
           const nid = s.nextId++;
           s.miners[nid] = { id:nid, level:m.level+1, lane, slot, pop:1 };
           s.lanes[lane].slots[slot]={ id:nid };
+          try { play?.(S_MERGE); } catch {}
         } else {
-          // החזרה למקום
+          // יעד תפוס — החזרה למקום
           cur.slots[m.slot] = { id:m.id };
         }
       }
@@ -622,7 +630,15 @@ function draw(){
 
   drawBg(ctx,b);
 
-  // ציור פילי ADD, סלעים וכורים
+  // יעד פוטנציאלי תחת הסמן (אם גוררים)
+  let hoverDrop = null;
+  if (dragRef.current.active) {
+    const px = (dragRef.current.x ?? 0) + (dragRef.current.ox ?? 0);
+    const py = (dragRef.current.y ?? 0) + (dragRef.current.oy ?? 0);
+    hoverDrop = pickSlot(px, py);
+  }
+
+  // ציור פילי ADD, סלעים וכלבים — מסתירים את הכלב הנגרר
   for (let l=0; l<LANES; l++){
     for (let k=0; k<SLOTS_PER_LANE; k++){
       const cell = s.lanes[l].slots[k];
@@ -635,21 +651,55 @@ function draw(){
     drawRock(ctx, rockRect(l), s.lanes[l].rock);
     for (let k=0; k<SLOTS_PER_LANE; k++){
       const cell = s.lanes[l].slots[k]; if (!cell) continue;
-      const m = s.miners[cell.id]; if (m) drawMiner(ctx,l,k,m);
+      const m = s.miners[cell.id]; if (!m) continue;
+      if (dragRef.current.active && dragRef.current.id === m.id) continue; // הסתרת המקור בזמן גרירה
+      drawMiner(ctx,l,k,m);
     }
   }
 
-  // רוח רפאים של גרירה
-  if (dragRef.current.active){
-    const s2 = stateRef.current; const m = s2.miners[dragRef.current.id];
-    if (m){
-      const r = slotRect(m.lane,m.slot);
-      const x = (dragRef.current.x ?? (r.x + r.w*0.52));
-      const y = (dragRef.current.y ?? (r.y + r.h*0.56));
+  // היילייט יעד
+  if (dragRef.current.active && hoverDrop) {
+    const r = slotRect(hoverDrop.lane, hoverDrop.slot);
+    ctx.save();
+    ctx.strokeStyle = "rgba(250,204,21,.9)";
+    ctx.lineWidth = 3;
+    roundRect(ctx, r.x+4, r.y+4, r.w-8, r.h-8, 12);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // GHOST של הכלב הנגרר + צל
+  if (dragRef.current.active) {
+    const id = dragRef.current.id;
+    const m  = s.miners[id];
+    if (m) {
+      const gx = (dragRef.current.x ?? 0) + (dragRef.current.ox ?? 0);
+      const gy = (dragRef.current.y ?? 0) + (dragRef.current.oy ?? 0);
+      const r0 = slotRect(m.lane, m.slot);
+      const w  = Math.min(r0.w, r0.h) * 0.84;
+
+      // צל
       ctx.save();
-      ctx.globalAlpha=.75;
-      // מציירים סביבת המיינר במקום — לשמור על גודל/פרופורציות
-      drawMiner(ctx,m.lane,m.slot,{...m});
+      ctx.globalAlpha = 0.35;
+      ctx.fillStyle = "#000";
+      ctx.beginPath();
+      ctx.ellipse(gx, gy + w*0.40, w*0.55, w*0.18, 0, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+
+      // הדמות
+      ctx.save();
+      ctx.globalAlpha = 0.9;
+      const img=getImg(IMG_MINER);
+      if (img.complete && img.naturalWidth>0) {
+        const frame=Math.floor(((stateRef.current?.anim?.t)||0)*8)%4;
+        const sw=img.width/4, sh=img.height;
+        const ww = w*1.05;
+        ctx.drawImage(img, frame*sw,0,sw,sh, gx-ww/2, gy-ww/2, ww, ww);
+      } else {
+        ctx.fillStyle="#22c55e";
+        ctx.beginPath(); ctx.arc(gx,gy,(w*0.35)*1.05,0,Math.PI*2); ctx.fill();
+      }
       ctx.restore();
     }
   }
