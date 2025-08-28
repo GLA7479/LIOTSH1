@@ -1462,11 +1462,10 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
           className="relative w-full border border-slate-700 rounded-2xl overflow-hidden shadow-2xl mt-1"
           style={{
             maxWidth: isDesktop ? "1024px" : "680px",
-            // כשהמסך **לא** מלא במובייל – נשתמש ב-height מחושב.
-            // במסך מלא – לא קובעים height כאן; PART 3 קובע גובה מדויק ב-JS.
+            // חשוב: תמיד לקבוע גובה במובייל (גם במסך מלא) כדי למנוע חיתוך.
             height: isDesktop
               ? undefined
-              : (isFullscreen ? undefined : `calc(100dvh - 96px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`),
+              : `calc(100dvh - 96px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`,
             aspectRatio: isDesktop ? "4 / 3" : undefined,
           }}
         >
