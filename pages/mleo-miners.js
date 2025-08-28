@@ -288,6 +288,38 @@ useEffect(() => {
   window.addEventListener("orientationchange", updateFlags);
   document.addEventListener("fullscreenchange", updateFlags);
 
+  // ===== Android fullscreen height fix (stretch wrapper to exact viewport) =====
+  const isAndroid = () => {
+    try { return /Android/i.test(navigator.userAgent); } catch { return false; }
+  };
+  const setWrapToViewport = () => {
+    const wrap = document.getElementById("miners-canvas-wrap");
+    if (!wrap) return;
+    const vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+    wrap.style.minHeight = vh + "px";
+    wrap.style.height    = vh + "px";
+  };
+  const restoreWrapHeight = () => {
+    const wrap = document.getElementById("miners-canvas-wrap");
+    if (!wrap) return;
+    wrap.style.minHeight = "";
+    wrap.style.height    = "";
+  };
+  const onFSChangeAndroid = () => {
+    if (!isAndroid()) return;
+    if (document.fullscreenElement) setWrapToViewport();
+    else restoreWrapHeight();
+  };
+  const onVVResize = () => {
+    if (document.fullscreenElement && isAndroid()) setWrapToViewport();
+  };
+  const onOrientFS = () => {
+    if (document.fullscreenElement && isAndroid()) setWrapToViewport();
+  };
+  document.addEventListener("fullscreenchange", onFSChangeAndroid);
+  if (window.visualViewport) window.visualViewport.addEventListener("resize", onVVResize);
+  window.addEventListener("orientationchange", onOrientFS);
+
   // מנע גלילה כשגוררים על הקנבס
   const preventTouchScroll = (e) => { if (e.target.closest?.("#miners-canvas")) e.preventDefault(); };
   document.addEventListener("touchmove", preventTouchScroll, { passive:false });
@@ -301,6 +333,11 @@ useEffect(() => {
       window.removeEventListener("resize", updateFlags);
       window.removeEventListener("orientationchange", updateFlags);
       document.removeEventListener("fullscreenchange", updateFlags);
+
+      document.removeEventListener("fullscreenchange", onFSChangeAndroid);
+      if (window.visualViewport) window.visualViewport.removeEventListener("resize", onVVResize);
+      window.removeEventListener("orientationchange", onOrientFS);
+
       document.removeEventListener("touchmove", preventTouchScroll);
     };
   }
@@ -332,6 +369,11 @@ useEffect(() => {
     window.removeEventListener("resize", updateFlags);
     window.removeEventListener("orientationchange", updateFlags);
     document.removeEventListener("fullscreenchange", updateFlags);
+
+    document.removeEventListener("fullscreenchange", onFSChangeAndroid);
+    if (window.visualViewport) window.visualViewport.removeEventListener("resize", onVVResize);
+    window.removeEventListener("orientationchange", onOrientFS);
+
     document.removeEventListener("touchmove", preventTouchScroll);
     document.removeEventListener("visibilitychange", onVisibility);
     window.removeEventListener("pagehide", onHide);
@@ -1427,7 +1469,7 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
           className="relative w-full border border-slate-700 rounded-2xl overflow-hidden shadow-2xl mt-1"
           style={{
             maxWidth: isDesktop ? "1024px" : "680px",
-            /* Fill available viewport height on mobile/iOS, minus header + safe areas */
+            // Mobile: fill dynamic viewport height (minus header + safe areas); Desktop keeps aspect ratio
             height: isDesktop
               ? undefined
               : `calc(100dvh - 65px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`,
