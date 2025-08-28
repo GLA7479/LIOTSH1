@@ -235,6 +235,18 @@ useEffect(() => {
     dpsMult: init.dpsMult, goldMult: init.goldMult,
   }));
 
+  // --- FIX: אם המתנה כבר הייתה מוכנה לפני הרענון, תרים את דגל ה־UI; ואם חסר טיימר – אתחל ---
+  try {
+    if (init.giftReady && (init.giftNextAt || 0) <= Date.now()) {
+      setGiftReadyFlag(true);
+    }
+    if (!init.giftNextAt || Number.isNaN(init.giftNextAt)) {
+      init.giftNextAt = Date.now() + currentGiftIntervalSec(init) * 1000;
+      init.giftReady = false;
+      save();
+    }
+  } catch {}
+
   // --- Load persisted ad cooldown so it doesn't reset on refresh ---
   try {
     const raw = localStorage.getItem(LS_KEY);
@@ -396,7 +408,7 @@ function setupCanvasAndLoop(cnv){
         id: hit.id,
         ox: p.x - hit.x,
         oy: p.y - hit.y,
-        x: p.x - (p.x - hit.x), // התחלה בנקודת המרכז
+        x: p.x - (p.x - hit.x),
         y: p.y - (p.y - hit.y),
       };
       return;
@@ -752,6 +764,7 @@ function tick(dt){
   s.lastSeen = now;
 }
 // === END PART 3 ===
+
 
 
 // === START PART 4 ===
@@ -1192,114 +1205,50 @@ function openDiamondChestIfReady() {
 
 
 // === START PART 5 ===
-// HUD computed values + Ad (EARN) handler — single source of truth (no duplicates)
+// HUD computed values + Gift heartbeat + EARN cooldown
 
-// ── Fallbacks ──
-const DOG_INTERVAL_SEC = typeof window !== "undefined" && window.DOG_INTERVAL_SEC || 15 * 60; // 15m
-const DOG_BANK_CAP     = typeof window !== "undefined" && window.DOG_BANK_CAP     || 6;
+const DOG_INTERVAL_SEC = (typeof window !== "undefined" && window.DOG_INTERVAL_SEC) || 15*60;
+const DOG_BANK_CAP = (typeof window !== "undefined" && window.DOG_BANK_CAP) || 6;
 
-const _currentGiftIntervalSec =
-  typeof currentGiftIntervalSec === "function"
-    ? currentGiftIntervalSec
-    : (s) => Math.max(5, Math.floor(s?.lastGiftIntervalSec || 20));
+const _currentGiftIntervalSec = typeof currentGiftIntervalSec==="function"?currentGiftIntervalSec:(s)=>Math.max(5,Math.floor(s?.lastGiftIntervalSec||20));
+const _getPhaseInfo = typeof getPhaseInfo==="function"?getPhaseInfo:(s,now=Date.now())=>{ const sec=_currentGiftIntervalSec(s,now); return { index:0,into:0,remain:sec,intervalSec:sec }; };
 
-const _getPhaseInfo =
-  typeof getPhaseInfo === "function"
-    ? getPhaseInfo
-    : (s, now = Date.now()) => {
-        const sec = _currentGiftIntervalSec(s, now);
-        return { index: 0, into: 0, remain: sec, intervalSec: sec };
-      };
+// heartbeat מתנות – רץ כל חצי שנייה
+useEffect(()=>{ const id=setInterval(()=>{ const s=stateRef.current; if(!s) return; const now=Date.now(); const intervalMs=_currentGiftIntervalSec(s)*1000; if(!s.giftNextAt){ s.giftNextAt=now+intervalMs; s.giftReady=false; save(); return; } if(!s.giftReady && s.giftNextAt<=now){ s.giftReady=true; setGiftReadyFlag(true); save(); }},500); return()=>clearInterval(id); },[]);
 
-// 1) Phase info + label
-const phaseNow = (() => {
-  const s = stateRef.current;
-  if (!s) return { index: 0, intervalSec: 20, remain: 20 };
-  return _getPhaseInfo(s, Date.now());
-})();
-const phaseLabel = `⏳ ${phaseNow.intervalSec}s gifts`;
+// Phase label
+const phaseNow=(()=>{const s=stateRef.current; if(!s) return {index:0,intervalSec:20,remain:20}; return _getPhaseInfo(s,Date.now());})();
+const phaseLabel=`⏳ ${phaseNow.intervalSec}s gifts`;
 
-// 2) Gift/Dog progress rings
-const giftProgress = (() => {
-  const s = stateRef.current; if (!s) return 0;
-  if (s.giftReady) return 1;
-  const now = Date.now();
-  const total  = (_currentGiftIntervalSec(s, now)) * 1000;
-  const remain = Math.max(0, (s.giftNextAt || now) - now);
-  return Math.max(0, Math.min(1, 1 - remain / total));
-})();
+// progress rings
+const giftProgress=(()=>{ const s=stateRef.current; if(!s) return 0; if(s.giftReady) return 1; const now=Date.now(); const total=_currentGiftIntervalSec(s,now)*1000; const remain=Math.max(0,(s.giftNextAt||now)-now); return Math.max(0,Math.min(1,1-remain/total)); })();
+const dogProgress=(()=>{ const s=stateRef.current; if(!s) return 0; if((s.autoDogBank||0)>=DOG_BANK_CAP) return 1; const now=Date.now(); const total=DOG_INTERVAL_SEC*1000; const last=s.autoDogLastAt||now; const elapsed=Math.max(0,now-last); return Math.max(0,Math.min(1,elapsed/total)); })();
 
-const dogProgress = (() => {
-  const s = stateRef.current; if (!s) return 0;
-  if ((s.autoDogBank || 0) >= DOG_BANK_CAP) return 1;
-  const now     = Date.now();
-  const total   = DOG_INTERVAL_SEC * 1000;
-  const last    = s.autoDogLastAt || now;
-  const elapsed = Math.max(0, now - last);
-  return Math.max(0, Math.min(1, elapsed / total));
-})();
+// circleStyle
+function circleStyle(progress,withBg=true){ const p=Math.max(0,Math.min(1,Number(progress)||0)); const deg=Math.round(360*p); const base=withBg?"radial-gradient(circle at 50% 50%, rgba(0,0,0,0.35) 55%, transparent 56%)":"transparent"; return { backgroundImage:`${base}, conic-gradient(#facc15 ${deg}deg, rgba(255,255,255,0.14) 0deg)`, transition:"background-image 0.2s linear" }; }
 
-// 3) Circle background helper (יחיד)
-function circleStyle(progress, withBg = true) {
-  const p = Math.max(0, Math.min(1, Number(progress) || 0));
-  const deg = Math.round(360 * p);
-  const base = withBg
-    ? "radial-gradient(circle at 50% 50%, rgba(0,0,0,0.35) 55%, transparent 56%)"
-    : "transparent";
-  return {
-    backgroundImage: `${base}, conic-gradient(#facc15 ${deg}deg, rgba(255,255,255,0.14) 0deg)`,
-    transition: "background-image 0.2s linear",
-  };
-}
+// ADD cooldown
+const sNow=stateRef.current;
+const nowMs=Date.now();
+const cooldownUntil=sNow?.adCooldownUntil||0;
+const addRemainMs=mounted?Math.max(0,cooldownUntil-nowMs):Number.POSITIVE_INFINITY;
+const addProgress=mounted?1-Math.min(1,addRemainMs/(10*60*1000)):0;
+const addRemainLabel=(()=>{ if(!mounted) return "…"; if(addRemainMs<=0) return "READY"; const m=Math.floor(addRemainMs/60000); const s=Math.floor((addRemainMs%60000)/1000); return `${m}:${String(s).padStart(2,"0")}`;})();
+const addDisabled=addRemainMs>0||adWatching;
 
-// 4) ADD (EARN) cooldown — ***מקור אמת מה־state*** כדי שלא יידלק אחרי רענון
-const sNow = stateRef.current;
-const nowMs = Date.now();
-const cooldownUntil = sNow?.adCooldownUntil || 0;
-const addRemainMs = mounted ? Math.max(0, cooldownUntil - nowMs) : Number.POSITIVE_INFINITY;
+// prices
+const spawnCostNow=sNow?.spawnCost??ui.spawnCost;
+const dpsCostNow=(typeof _dpsCost==="function")?_dpsCost(sNow):160;
+const goldCostNow=(typeof _goldCost==="function")?_goldCost(sNow):160;
+const canBuyMiner=!!sNow&&sNow.gold>=spawnCostNow&&Object.keys(sNow.miners||{}).length<(typeof MAX_MINERS==="number"?MAX_MINERS:16);
+const canBuyDps=!!sNow&&sNow.gold>=dpsCostNow;
+const canBuyGold=!!sNow&&sNow.gold>=goldCostNow;
+const price=(n)=>formatShort(n??0);
 
-const addProgress = mounted ? 1 - Math.min(1, addRemainMs / (10 * 60 * 1000)) : 0;
-
-const addRemainLabel = (() => {
-  if (!mounted) return "…";
-  if (addRemainMs <= 0) return "READY";
-  const m = Math.floor(addRemainMs / 60000);
-  const s = Math.floor((addRemainMs % 60000) / 1000);
-  return `${m}:${String(s).padStart(2, "0")}`;
-})();
-
-const addDisabled = addRemainMs > 0 || adWatching;
-
-// 5) מחירי שדרוגים/קנייה בזמן רינדור
-const spawnCostNow = sNow?.spawnCost ?? ui.spawnCost;
-const dpsCostNow   = (typeof _dpsCost === "function")  ? _dpsCost(sNow)  : 160;
-const goldCostNow  = (typeof _goldCost === "function") ? _goldCost(sNow) : 160;
-
-const canBuyMiner  = !!sNow && sNow.gold >= spawnCostNow && Object.keys(sNow.miners || {}).length < (typeof MAX_MINERS === "number" ? MAX_MINERS : 16);
-const canBuyDps    = !!sNow && sNow.gold >= dpsCostNow;
-const canBuyGold   = !!sNow && sNow.gold >= goldCostNow;
-
-const price = (n) => formatShort(n ?? 0);
-
-// 6) כפתור ה־EARN (מודאל + קולדאון)
-function onAdd() {
-  try { play?.(S_CLICK); } catch {}
-  const s = stateRef.current; if (!s) return;
-  const now = Date.now();
-  if (now < (s.adCooldownUntil || 0)) {
-    const remain = Math.ceil(((s.adCooldownUntil || 0) - now) / 1000);
-    const m = Math.floor(remain / 60), sec = String(remain % 60).padStart(2, "0");
-    if (typeof setGiftToast === "function") {
-      const id = Math.random().toString(36).slice(2);
-      setGiftToast({ text: `Ad bonus in ${m}:${sec}`, id });
-      setTimeout(() => { setGiftToast(cur => (cur && cur.id === id ? null : cur)); }, 2000);
-    }
-    return;
-  }
-  setAdVideoEnded(false);
-  setShowAdModal(true);
-}
+// EARN button
+function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) return; const now=Date.now(); if(now<(s.adCooldownUntil||0)){ const remain=Math.ceil(((s.adCooldownUntil||0)-now)/1000); const m=Math.floor(remain/60),sec=String(remain%60).padStart(2,"0"); if(typeof setGiftToast==="function"){ const id=Math.random().toString(36).slice(2); setGiftToast({text:`Ad bonus in ${m}:${sec}`,id}); setTimeout(()=>{setGiftToast(cur=>(cur&&cur.id===id?null:cur));},2000);} return; } setAdVideoEnded(false); setShowAdModal(true); }
 // === END PART 5 ===
+
  
 
 // === START PART 6 ===
@@ -1458,7 +1407,7 @@ function onAdd() {
         <div
           id="miners-canvas-wrap"
           className="relative w-full border border-slate-700 rounded-2xl overflow-hidden shadow-2xl"
-          style={{ maxWidth: isDesktop ? "1024px" : "680px", aspectRatio: isDesktop ? "4 / 3" : undefined }}
+          style={{ maxWidth: isDesktop ? "1024px" : "680px", aspectRatio: isDesktop ? "4 / 3" : "9 / 16" }}
         >
           <canvas id="miners-canvas" ref={canvasRef} className="w-full h-full block touch-none select-none" />
 
@@ -1655,7 +1604,7 @@ function onAdd() {
           </div>
         )}
 
-        {/* Diamond Rewards Modal (smaller; no bottom note) */}
+        {/* Diamond Rewards Modal */}
         {showDiamondInfo && (
           <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/80 px-4">
             <div className="bg-white/10 backdrop-blur rounded-2xl p-5 border border-white/20 shadow-2xl max-w-sm w-[92%] sm:w-[420px] text-left overflow-auto max-h-[85vh]">
@@ -1730,5 +1679,5 @@ function onAdd() {
       </div>
     </Layout>
   );
-} 
+}
 // === END PART 6 ===
