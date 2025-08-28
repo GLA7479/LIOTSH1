@@ -1,112 +1,79 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* === Global Styles (globals.css) === */
 
-/* בסיס */
-html, body { padding: 0; margin: 0; background: #000; color: #fff; scroll-behavior: smooth; }
-* { box-sizing: border-box; }
+html,
+body {
+  padding: 0;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
+    Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+  background: #000;
+  color: #fff;
+  min-height: 100vh;
+}
 
-/* קישורים */
-a { transition: color .2s; }
-a:hover { color: #ffd700; }
+a {
+  color: inherit;
+  text-decoration: none;
+}
 
-/* ===== PWA / iOS height fixes ===== */
-:root { --vh: 100dvh; --app-vh: 100vh; }    /* --app-vh מתעדכן ב-_app.js לפי innerHeight */
-@supports not (height: 100dvh) { :root { --vh: 100vh; } }
+* {
+  box-sizing: border-box;
+}
 
 .fullscreen-page {
-  min-height: var(--app-vh); /* גובה אמיתי */
-  padding-top: calc(env(safe-area-inset-top, 0px));
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px));
-}
-
-/* מיקומים בטוחים לכפתורים קבועים */
-.fixed-top-safe    { top:    calc(env(safe-area-inset-top, 0px) + 56px); }
-.fixed-bottom-safe { bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); }
-
-html, body { -webkit-tap-highlight-color: transparent; touch-action: manipulation; overscroll-behavior-y: none; }
-
-/* ===== Splash animations for /game ===== */
-@keyframes pulse-slow {
-  0%,100% { transform: scale(1); opacity: .25; }
-  50%     { transform: scale(1.06); opacity: .35; }
-}
-.animate-pulse-slow { animation: pulse-slow 2.6s ease-in-out infinite; }
-
-/* אנימציית כניסה איטית לטקסט */
-@keyframes introTextIn {
-  0%   { opacity: 0; transform: translateY(18px) scale(0.98); filter: blur(6px); }
-  40%  { opacity: 1; transform: translateY(0)   scale(1.00);  filter: blur(0); }
-  100% { opacity: 1; transform: translateY(0)   scale(1.00);  filter: blur(0); }
-}
-.intro-text-animated {
-  animation: introTextIn 1.8s ease-out both; /* כניסה איטית יותר */
-  text-shadow: 0 2px 12px rgba(0,0,0,.55);
-}
-/* ===== Fixed top HUD (stable on all devices) ===== */
-
-/* גובה ברירת־מחדל של ה־HUD (אפשר לכוון אם צריך) */
-:root { --hud-h: 68px; }
-
-/* בר עליון קבוע, עם safe-area ו־backdrop, לא מושפע מ־100vh/מקלדת */
-.hud-fixed {
-  position: fixed;
-  left: 0;
-  right: 0;
-  top: calc(env(safe-area-inset-top, 0px));
-  z-index: 60;
-  padding: 8px 8px 10px;
-  background: rgba(0,0,0,.55);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-
-/* מסילה חד־שורתית שלא נשברת. אם אין מקום — גלילה אופקית עדינה. */
-.hud-row {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: max-content; /* כל צ'יפ תופס את המינימום שלו */
-  gap: 8px;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  justify-content: center;       /* ממורכז במסכים רחבים */
-  max-width: 980px;              /* כמו בתמונה שלך */
-  margin: 0 auto;
-  padding: 0 6px;
-  overflow-x: auto;              /* במקום שבירה לשורה 2 */
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;         /* מסתיר scroll במספר דפדפנים */
-}
-.hud-row::-webkit-scrollbar { display: none; }
-
-/* צ'יפים קבועים בגובה ומרווחים — לא קופצים ולא נשברים */
-.hud-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 40px;                  /* גובה קבוע כדי למנוע "קפיצות" */
-  padding: 0 12px;
-  border-radius: 12px;
-  background: rgba(0,0,0,.65);
-  border: 1px solid rgba(255,255,255,.08);
-  white-space: nowrap;
-  font-weight: 800;
-  font-size: 14px;
-  line-height: 1;
 }
 
-/* וריאציות קטנות אם תרצה צבעים שונים לצ'יפים (אופציונלי) */
-.hud-chip--stat { background: rgba(0,0,0,.65); }
-.hud-chip--phase { background: rgba(17,24,39,.65); }
-.hud-chip--action { background: rgba(250,204,21,.22); border-color: rgba(250,204,21,.5); }
+/* ===== iOS-only game viewport & safe-area fixes ===== */
+@supports (-webkit-touch-callout: none) {
+  /* גובה נכון למשחקים באייפון (כולל מחווה תחתונה) */
+  .game-viewport,
+  .game-container,
+  .game-root,
+  [data-game-root],
+  canvas {
+    min-height: 100dvh;
+    height: calc(
+      100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)
+    );
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-top: env(safe-area-inset-top, 0px);
+  }
 
-/* כדי שהתוכן לא יכנס מתחת ל־HUD: עוטפים את המשחק במחלקה הזו */
-.with-hud-pad {
-  padding-top: calc(var(--hud-h) + env(safe-area-inset-top, 0px) + 8px);
+  html,
+  body {
+    min-height: -webkit-fill-available;
+    height: auto;
+  }
+
+  /* אלמנטים מקובעים בתחתית (HUD/כפתורים) יקבלו מרווח בטוח */
+  .fixed,
+  .fixed-bottom-safe,
+  [class*="fixed-bottom"],
+  [data-game-ui="bottom"] {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  }
+
+  /* אם משתמשים בפולסק्रीन "למחצה" ב־iOS, הכריח גובה מלא */
+  .fullscreen-page,
+  .fullscreen-fix {
+    min-height: 100dvh;
+    height: 100dvh;
+  }
 }
 
-/* במסכים מאוד קטנים נוריד קצת גובה כדי להרוויח מקום */
-@media (max-width: 360px) {
-  :root { --hud-h: 60px; }
-  .hud-chip { height: 36px; font-size: 13px; }
+/* fallback למכשירים שאין בהם 100dvh */
+@supports not (height: 100dvh) {
+  .game-viewport,
+  .game-container,
+  .game-root,
+  [data-game-root],
+  canvas {
+    min-height: 100vh;
+  }
 }
-
