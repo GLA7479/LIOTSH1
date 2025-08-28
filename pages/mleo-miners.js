@@ -288,48 +288,6 @@ useEffect(() => {
   window.addEventListener("orientationchange", updateFlags);
   document.addEventListener("fullscreenchange", updateFlags);
 
-  // ===== Android fullscreen height fix (fit to available space inside the fullscreen root) =====
-  const isAndroid = () => {
-    try { return /Android/i.test(navigator.userAgent); } catch { return false; }
-  };
-
-  const setWrapToAvailable = () => {
-    const wrap = document.getElementById("miners-canvas-wrap");
-    const fsRoot = document.fullscreenElement; // אמור להיות wrapRef.current
-    if (!wrap || !fsRoot || !isAndroid()) return;
-
-    const rootRect = fsRoot.getBoundingClientRect();
-    const wrapRect = wrap.getBoundingClientRect();
-    // הגובה המדויק הזמין בתוך ה-root, מהחלק העליון של ה-wrap עד התחתית של ה-root
-    const available = Math.max(420, Math.floor(rootRect.bottom - wrapRect.top));
-
-    wrap.style.minHeight = available + "px";
-    wrap.style.height    = available + "px";
-  };
-
-  const restoreWrapHeight = () => {
-    const wrap = document.getElementById("miners-canvas-wrap");
-    if (!wrap) return;
-    wrap.style.minHeight = "";
-    wrap.style.height    = "";
-  };
-
-  const onFSChangeAndroid = () => {
-    if (!isAndroid()) return;
-    if (document.fullscreenElement) setWrapToAvailable();
-    else restoreWrapHeight();
-  };
-  const onVVResize = () => {
-    if (document.fullscreenElement && isAndroid()) setWrapToAvailable();
-  };
-  const onOrientFS = () => {
-    if (document.fullscreenElement && isAndroid()) setWrapToAvailable();
-  };
-
-  document.addEventListener("fullscreenchange", onFSChangeAndroid);
-  if (window.visualViewport) window.visualViewport.addEventListener("resize", onVVResize);
-  window.addEventListener("orientationchange", onOrientFS);
-
   // מנע גלילה כשגוררים על הקנבס
   const preventTouchScroll = (e) => { if (e.target.closest?.("#miners-canvas")) e.preventDefault(); };
   document.addEventListener("touchmove", preventTouchScroll, { passive:false });
@@ -343,11 +301,6 @@ useEffect(() => {
       window.removeEventListener("resize", updateFlags);
       window.removeEventListener("orientationchange", updateFlags);
       document.removeEventListener("fullscreenchange", updateFlags);
-
-      document.removeEventListener("fullscreenchange", onFSChangeAndroid);
-      if (window.visualViewport) window.visualViewport.removeEventListener("resize", onVVResize);
-      window.removeEventListener("orientationchange", onOrientFS);
-
       document.removeEventListener("touchmove", preventTouchScroll);
     };
   }
@@ -379,11 +332,6 @@ useEffect(() => {
     window.removeEventListener("resize", updateFlags);
     window.removeEventListener("orientationchange", updateFlags);
     document.removeEventListener("fullscreenchange", updateFlags);
-
-    document.removeEventListener("fullscreenchange", onFSChangeAndroid);
-    if (window.visualViewport) window.visualViewport.removeEventListener("resize", onVVResize);
-    window.removeEventListener("orientationchange", onOrientFS);
-
     document.removeEventListener("touchmove", preventTouchScroll);
     document.removeEventListener("visibilitychange", onVisibility);
     window.removeEventListener("pagehide", onHide);
@@ -435,17 +383,30 @@ function setupCanvasAndLoop(cnv){
   const DPR = window.devicePixelRatio || 1;
 
   const resize = () => {
-    const rect = cnv.parentElement?.getBoundingClientRect();
-    const targetW = Math.min(rect?.width || 360, 1024);
-    const targetH = rect ? Math.max(420, (rect.height || 600)) : 600;
+    const isFS = !!document.fullscreenElement;
+
+    let targetW, targetH;
+    if (isFS) {
+      // במסך מלא: מבססים על viewport האמיתי כדי לא לחתוך תחתית
+      targetW = Math.min(window.innerWidth || 360, 1024);
+      targetH = Math.max(420, (window.innerHeight || 600) - 1); // -1 למניעת גלילה מיותרת
+    } else {
+      // מצב רגיל: לפי האלמנט העוטף
+      const rect = cnv.parentElement?.getBoundingClientRect();
+      targetW = Math.min(rect?.width || 360, 1024);
+      targetH = rect ? Math.max(420, (rect.height || 600)) : 600;
+    }
+
     cnv.style.width  = `${targetW}px`;
     cnv.style.height = `${targetH}px`;
-    cnv.width = Math.floor(targetW * DPR);
-    cnv.height= Math.floor(targetH * DPR);
+    cnv.width  = Math.floor(targetW * DPR);
+    cnv.height = Math.floor(targetH * DPR);
     ctx.setTransform(DPR,0,0,DPR,0,0);
     draw();
   };
+
   window.addEventListener("resize", resize);
+  document.addEventListener("fullscreenchange", resize);
   resize();
 
   // קלט — גרירה ומיקום (UX משופר)
@@ -454,7 +415,6 @@ function setupCanvasAndLoop(cnv){
     const p = pos(e);
     const hit = pickMiner(p.x,p.y);
     if (hit) {
-      // שמור offset יחסית למרכז הדמות
       dragRef.current = {
         active:true,
         id: hit.id,
@@ -473,7 +433,7 @@ function setupCanvasAndLoop(cnv){
     const p = pos(e);
     dragRef.current.x = p.x - dragRef.current.ox;
     dragRef.current.y = p.y - dragRef.current.oy;
-    draw(); // רענון מיידי
+    draw();
   };
   const onUp = (e) => {
     if (!dragRef.current.active) return;
@@ -499,7 +459,6 @@ function setupCanvasAndLoop(cnv){
           s.lanes[lane].slots[slot]={ id:nid };
           try { play?.(S_MERGE); } catch {}
         } else {
-          // יעד תפוס — החזרה למקום
           cur.slots[m.slot] = { id:m.id };
         }
       }
@@ -531,12 +490,11 @@ function setupCanvasAndLoop(cnv){
   return () => {
     cancelAnimationFrame(rafRef.current);
     window.removeEventListener("resize", resize);
+    document.removeEventListener("fullscreenchange", resize);
     cnv.removeEventListener("mousedown", onDown);
     cnv.removeEventListener("mousemove", onMove);
     window.removeEventListener("mouseup", onUp);
-    cnv.removeEventListener("touchstart", onDown);
-    cnv.removeEventListener("touchmove", onMove);
-    cnv.removeEventListener("touchend", onUp);
+    // לא ניתן להסיר מאזינים אנונימיים; נשאיר כך כדי לא לשבור.
   };
 }
 
@@ -597,6 +555,21 @@ function pickSlot(x,y){
     for (let k=0; k<SLOTS_PER_LANE; k++){
       const r = slotRect(l,k);
       if (pointInRect(x,y,r)) return { lane:l, slot:k };
+    }
+  }
+  return null;
+}
+function pickMiner(x,y){
+  const s = stateRef.current; if (!s) return null;
+  for (let l=0; l<LANES; l++){
+    for (let k=0; k<SLOTS_PER_LANE; k++){
+      const cell = s.lanes[l].slots[k]; if(!cell) continue;
+      const r = slotRect(l,k);
+      const cx = r.x + r.w*0.52;
+      const cy = r.y + r.h*0.56;
+      const rad = Math.min(r.w,r.h)*0.33;
+      const dx=x-cx, dy=y-cy;
+      if (dx*dx+dy*dy < rad*rad) return { id:cell.id, x:cx, y:cy };
     }
   }
   return null;
