@@ -387,12 +387,15 @@ function setupCanvasAndLoop(cnv){
 
     let targetW, targetH;
     if (isFS) {
-      // במסך מלא: מבססים על viewport האמיתי כדי לא לחתוך תחתית
+      // במסך מלא: גובה מלא אמיתי + עדכון גם ל־wrapper
       targetW = Math.min(window.innerWidth || 360, 1024);
       targetH = Math.max(420, (window.innerHeight || 600) - 1); // -1 למניעת גלילה מיותרת
+      const wrap = cnv.parentElement;
+      if (wrap) wrap.style.height = `${window.innerHeight}px`;
     } else {
       // מצב רגיל: לפי האלמנט העוטף
       const wrap = cnv.parentElement;
+      if (wrap) wrap.style.height = ""; // נקה גובה ידני ממסך מלא
       const rect = wrap?.getBoundingClientRect();
       const innerW = Math.max(320, Math.floor(wrap?.clientWidth  ?? rect?.width  ?? 360));
       const innerH = Math.max(420, Math.floor(wrap?.clientHeight ?? rect?.height ?? 600));
@@ -1274,10 +1277,10 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
  
 
 // === START PART 6 ===
-  // ——— iOS detection (to size the canvas a bit shorter on iPhone/iPad) ———
+  // ——— iOS detection ———
   const [isIOS, setIsIOS] = useState(false);
 
-  // ——— Track fullscreen state locally (so we can change layout rules) ———
+  // ——— Track fullscreen state (משמש רק לעיצוב) ———
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
@@ -1307,6 +1310,11 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
           pt-[calc(env(safe-area-inset-top)+8px)]
           pb-[calc(env(safe-area-inset-bottom)+24px)]
         "
+        // במסך מלא: מבטלים padding כדי שהקאנבס יישב הכי גבוה וימלא את כל הגובה
+        style={{
+          paddingTop: isFullscreen ? 0 : undefined,
+          paddingBottom: isFullscreen ? 0 : undefined,
+        }}
       >
         {/* Landscape overlay on mobile */}
         {isMobileLandscape && (
@@ -1448,9 +1456,11 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
         )}
 
         {/* ===== Title ===== */}
-        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight mt-1 mb-4 leading-none">
-          MLEO Miners — v5.8
-        </h1>
+        {!isFullscreen && (
+          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight mt-1 mb-4 leading-none">
+            MLEO Miners — v5.8
+          </h1>
+        )}
 
         {/* ===== Canvas wrapper ===== */}
         <div
@@ -1458,11 +1468,11 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
           className="relative w-full border border-slate-700 rounded-2xl overflow-hidden shadow-2xl mt-1"
           style={{
             maxWidth: isDesktop ? "1024px" : "680px",
-            // כשהמסך **לא** מלא במובייל – נשתמש ב-height מחושב.
-            // במסך מלא – לא קובעים height כאן; PART 3 קובע גובה מדויק ב-JS.
             height: isDesktop
               ? undefined
-              : (isFullscreen ? undefined : `calc(100svh - 65px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`),
+              : (isFullscreen
+                  ? "100vh" // במסך מלא – גובה מלא אמיתי
+                  : `calc(100svh - 65px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`),
             aspectRatio: isDesktop ? "4 / 3" : undefined,
           }}
         >
@@ -1712,7 +1722,7 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
                 <button
                   onClick={() => { openDiamondChestIfReady(); }}
                   disabled={(stateRef.current?.diamonds || 0) < 3}
-                  className={`px-3 py-1.5 rounded-lg font-extrabול text-xs ${
+                  className={`px-3 py-1.5 rounded-lg font-extrabold text-xs ${
                     (stateRef.current?.diamonds || 0) >= 3
                       ? "bg-yellow-400 hover:bg-yellow-300 text-black"
                       : "bg-slate-400 text-slate-800 opacity-60 cursor-not-allowed"
