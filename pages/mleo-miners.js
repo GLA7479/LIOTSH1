@@ -1280,6 +1280,11 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
   // ——— iOS detection ———
   const [isIOS, setIsIOS] = useState(false);
 
+// מרחק HUD מהחלק העליון: iOS = רק ה-safe-area, Android = הרבה יותר
+const HUD_TOP_IOS_PX = 0;     // לא לרדת בכלל (מעבר ל-safe-area)
+const HUD_TOP_ANDROID_PX = 160; // באנדרואיד לרדת הרבה (כוונן לפי הצורך)
+
+
   // ——— Track fullscreen state (משמש רק לעיצוב) ———
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -1478,118 +1483,124 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
         >
           <canvas id="miners-canvas" ref={canvasRef} className="w-full h-full block touch-none select-none" />
 
-          {/* ==== TOP HUD ==== */}
-<div className="absolute left-1/2 -translate-x-1/2 z-[30] w-[calc(100%-16px)] max-w-[980px] top-6 sm:top-8 md:top-20">
+{/* ==== TOP HUD ==== */}
+<div
+  className="absolute left-1/2 -translate-x-1/2 z-[30] w-[calc(100%-16px)] max-w-[980px]"
+  style={{
+    // ב-iOS: רק safe-area; באנדרואיד: safe-area + מרחק גדול
+    top: `calc(env(safe-area-inset-top, 0px) + ${(isIOS ? HUD_TOP_IOS_PX : HUD_TOP_ANDROID_PX)}px)`
+  }}
+>
+  <div className="flex gap-2 flex-wrap justify-center items-center text-sm">
+    {/* Gold + ring */}
+    <div className="px-2 py-1 bg-black/60 rounded-lg shadow flex items-center gap-2">
+      <div
+        className="relative w-8 h-8 rounded-full grid place-items-center"
+        style={circleStyle(addProgress, true)}
+        title={addRemainMs > 0 ? `Next ad in ${addRemainLabel}` : "Ad bonus ready"}
+      >
+        <div className="w-6 h-6 rounded-full bg-black/70 grid place-items-center">
+          <img src={IMG_COIN} alt="coin" className="w-4 h-4" />
+        </div>
+      </div>
+      <b>{formatShort(stateRef.current?.gold ?? 0)}</b>
+    </div>
 
-            <div className="flex gap-2 flex-wrap justify-center items-center text-sm">
-              {/* Gold + ring */}
-              <div className="px-2 py-1 bg-black/60 rounded-lg shadow flex items-center gap-2">
-                <div
-                  className="relative w-8 h-8 rounded-full grid place-items-center"
-                  style={circleStyle(addProgress, true)}
-                  title={addRemainMs > 0 ? `Next ad in ${addRemainLabel}` : "Ad bonus ready"}
-                >
-                  <div className="w-6 h-6 rounded-full bg-black/70 grid place-items-center">
-                    <img src={IMG_COIN} alt="coin" className="w-4 h-4" />
-                  </div>
-                </div>
-                <b>{formatShort(stateRef.current?.gold ?? 0)}</b>
-              </div>
+    <div className="px-2 py-1 bg-black/60 rounded-lg shadow">🪓 x<b>{(stateRef.current?.dpsMult || 1).toFixed(2)}</b></div>
+    <div className="px-2 py-1 bg-black/60 rounded-lg shadow">🟡 x<b>{(stateRef.current?.goldMult || 1).toFixed(2)}</b></div>
+    <div className="px-2 py-1 bg-black/60 rounded-lg shadow">🐶 LV <b>{stateRef.current?.spawnLevel || 1}</b></div>
 
-              <div className="px-2 py-1 bg-black/60 rounded-lg shadow">🪓 x<b>{(stateRef.current?.dpsMult || 1).toFixed(2)}</b></div>
-              <div className="px-2 py-1 bg-black/60 rounded-lg shadow">🟡 x<b>{(stateRef.current?.goldMult || 1).toFixed(2)}</b></div>
-              <div className="px-2 py-1 bg-black/60 rounded-lg shadow">🐶 LV <b>{stateRef.current?.spawnLevel || 1}</b></div>
+    {/* Diamonds counter (clickable) */}
+    <button
+      onClick={() => setShowDiamondInfo(true)}
+      className="px-2 py-1 bg-black/70 rounded-lg shadow flex items-center gap-1 hover:bg-black/60 active:scale-95 transition cursor-pointer"
+      aria-label="Diamond rewards info"
+      title="Tap to open Diamond chest"
+    >
+      <span>💎</span>
+      <b>{stateRef.current?.diamonds ?? 0}</b>
+      <span className="opacity-80">/3</span>
+    </button>
 
-              {/* Diamonds counter (clickable) */}
-              <button
-                onClick={() => setShowDiamondInfo(true)}
-                className="px-2 py-1 bg-black/70 rounded-lg shadow flex items-center gap-1 hover:bg-black/60 active:scale-95 transition cursor-pointer"
-                aria-label="Diamond rewards info"
-                title="Tap to open Diamond chest"
-              >
-                <span>💎</span>
-                <b>{stateRef.current?.diamonds ?? 0}</b>
-                <span className="opacity-80">/3</span>
-              </button>
+    <div className="px-2 py-1 bg-black/60 rounded-lg shadow">{`⏳ ${(_getPhaseInfo(stateRef.current, Date.now()).intervalSec)}s gifts`}</div>
 
-              <div className="px-2 py-1 bg-black/60 rounded-lg shadow">{`⏳ ${(_getPhaseInfo(stateRef.current, Date.now()).intervalSec)}s gifts`}</div>
+    <div className="flex items-center gap-3 ml-2">
+      <div
+        className="relative w-8 h-8 rounded-full grid place-items-center"
+        style={circleStyle(giftProgress, true)}
+        title={`⏳ ${(_getPhaseInfo(stateRef.current, Date.now()).intervalSec)}s gifts`}
+      >
+        <div className="w-6 h-6 rounded-full bg-black/70 grid place-items-center text-[10px] font-extrabold">🎁</div>
+      </div>
+      <div
+        className="relative w-8 h-8 rounded-full grid place-items-center"
+        style={circleStyle(dogProgress, true)}
+        title="Auto-dog every 15m (bank up to 6)"
+      >
+        <div className="w-6 h-6 rounded-full bg-black/70 grid place-items-center text-[10px] font-extrabold">🐶</div>
+      </div>
+    </div>
+  </div>
 
-              <div className="flex items-center gap-3 ml-2">
-                <div
-                  className="relative w-8 h-8 rounded-full grid place-items-center"
-                  style={circleStyle(giftProgress, true)}
-                  title={`⏳ ${(_getPhaseInfo(stateRef.current, Date.now()).intervalSec)}s gifts`}
-                >
-                  <div className="w-6 h-6 rounded-full bg-black/70 grid place-items-center text-[10px] font-extrabold">🎁</div>
-                </div>
-                <div
-                  className="relative w-8 h-8 rounded-full grid place-items-center"
-                  style={circleStyle(dogProgress, true)}
-                  title="Auto-dog every 15m (bank up to 6)"
-                >
-                  <div className="w-6 h-6 rounded-full bg-black/70 grid place-items-center text-[10px] font-extrabold">🐶</div>
-                </div>
-              </div>
-            </div>
+  {/* Actions row */}
+  <div className="flex gap-2 mt-2 flex-wrap justify-center text-sm">
+    <button
+      onClick={addMiner}
+      disabled={!canBuyMiner}
+      className={`px-3 py-1.5 rounded-xl text-slate-900 font-bold shadow transition
+        ${canBuyMiner
+          ? "bg-emerald-500 hover:bg-emerald-400 ring-2 ring-emerald-300 shadow-[0_0_18px_rgba(16,185,129,.55)]"
+          : "bg-emerald-500 opacity-60 cursor-not-allowed"}`}
+    >
+      + 🐶 Miner (LV {stateRef.current?.spawnLevel || 1}) — {formatShort(spawnCostNow)}
+    </button>
 
-            {/* Actions row */}
-            <div className="flex gap-2 mt-2 flex-wrap justify-center text-sm">
-              <button
-                onClick={addMiner}
-                disabled={!canBuyMiner}
-                className={`px-3 py-1.5 rounded-xl text-slate-900 font-bold shadow transition
-                  ${canBuyMiner
-                    ? "bg-emerald-500 hover:bg-emerald-400 ring-2 ring-emerald-300 shadow-[0_0_18px_rgba(16,185,129,.55)]"
-                    : "bg-emerald-500 opacity-60 cursor-not-allowed"}`}
-              >
-                + 🐶 Miner (LV {stateRef.current?.spawnLevel || 1}) — {formatShort(spawnCostNow)}
-              </button>
+    <button
+      onClick={upgradeDps}
+      disabled={!canBuyDps}
+      className={`h-8 px-2.5 rounded-lg text-[13px] leading-none inline-flex items-center
+        text-slate-900 font-bold shadow-sm transition
+        ${canBuyDps
+          ? "bg-sky-500 hover:bg-sky-400 ring-2 ring-sky-300 shadow-[0_0_18px_rgba(56,189,248,.55)]"
+          : "bg-sky-500 opacity-60 cursor-not-allowed"}`}
+    >
+      🪓 +10% (Cost {formatShort(dpsCostNow)})
+    </button>
 
-              <button
-                onClick={upgradeDps}
-                disabled={!canBuyDps}
-                className={`h-8 px-2.5 rounded-lg text-[13px] leading-none inline-flex items-center
-                  text-slate-900 font-bold shadow-sm transition
-                  ${canBuyDps
-                    ? "bg-sky-500 hover:bg-sky-400 ring-2 ring-sky-300 shadow-[0_0_18px_rgba(56,189,248,.55)]"
-                    : "bg-sky-500 opacity-60 cursor-not-allowed"}`}
-              >
-                🪓 +10% (Cost {formatShort(dpsCostNow)})
-              </button>
+    <button
+      onClick={upgradeGold}
+      disabled={!canBuyGold}
+      className={`px-3 py-1.5 rounded-xl text-slate-900 font-bold shadow transition
+        ${canBuyGold
+          ? "bg-amber-400 hover:bg-amber-300 ring-2 ring-amber-300 shadow-[0_0_18px_rgba(251,191,36,.6)]"
+          : "bg-amber-400 opacity-60 cursor-not-allowed"}`}
+    >
+      🟡 +10% (Cost {formatShort(goldCostNow)})
+    </button>
 
-              <button
-                onClick={upgradeGold}
-                disabled={!canBuyGold}
-                className={`px-3 py-1.5 rounded-xl text-slate-900 font-bold shadow transition
-                  ${canBuyGold
-                    ? "bg-amber-400 hover:bg-amber-300 ring-2 ring-amber-300 shadow-[0_0_18px_rgba(251,191,36,.6)]"
-                    : "bg-amber-400 opacity-60 cursor-not-allowed"}`}
-              >
-                🟡 +10% (Cost {formatShort(goldCostNow)})
-              </button>
+    {/* GAIN */}
+    <button
+      onClick={onAdd}
+      disabled={addDisabled}
+      className={`px-3 py-1.5 rounded-xl text-slate-900 font-bold shadow transition
+        ${addDisabled
+          ? "bg-indigo-400 opacity-60 cursor-not-allowed"
+          : "bg-indigo-400 hover:bg-indigo-300 ring-2 ring-indigo-300 shadow-[0_0_18px_rgba(129,140,248,.45)]"}`}
+      title={addRemainMs > 0 ? `Ad bonus in ${addRemainLabel}` : "Watch ad to earn"}
+    >
+      GAIN {addRemainMs > 0 ? `(${addRemainLabel})` : ""}
+    </button>
 
-              {/* GAIN */}
-              <button
-                onClick={onAdd}
-                disabled={addDisabled}
-                className={`px-3 py-1.5 rounded-xl text-slate-900 font-bold shadow transition
-                  ${addDisabled
-                    ? "bg-indigo-400 opacity-60 cursor-not-allowed"
-                    : "bg-indigo-400 hover:bg-indigo-300 ring-2 ring-indigo-300 shadow-[0_0_18px_rgba(129,140,248,.45)]"}`}
-                title={addRemainMs > 0 ? `Ad bonus in ${addRemainLabel}` : "Watch ad to earn"}
-              >
-                GAIN {addRemainMs > 0 ? `(${addRemainLabel})` : ""}
-              </button>
+    <button
+      onClick={() => setShowResetConfirm(true)}
+      className="px-3 py-1.5 rounded-xl bg-rose-500 hover:bg-rose-400 text-white font-bold shadow transition ring-2 ring-rose-300"
+      title="Reset all progress"
+    >
+      RESET
+    </button>
+  </div>
+</div>
 
-              <button
-                onClick={() => setShowResetConfirm(true)}
-                className="px-3 py-1.5 rounded-xl bg-rose-500 hover:bg-rose-400 text-white font-bold shadow transition ring-2 ring-rose-300"
-                title="Reset all progress"
-              >
-                RESET
-              </button>
-            </div>
-          </div>
 
           {/* Toast (gift result) */}
           {giftToast && (
