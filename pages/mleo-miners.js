@@ -1427,8 +1427,10 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
           className="relative w-full border border-slate-700 rounded-2xl overflow-hidden shadow-2xl mt-6"
           style={{
             maxWidth: isDesktop ? "1024px" : "680px",
-            // Desktop: keep aspect ratio; Mobile: fixed dvh height; iOS slightly shorter to avoid Safari bars
-            height: isDesktop ? undefined : (isPortrait ? (isIOS ? "70dvh" : "78dvh") : "70dvh"),
+            /* Fill available viewport height on mobile/iOS, minus header + safe areas */
+            height: isDesktop
+              ? undefined
+              : `calc(100dvh - 65px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`,
             aspectRatio: isDesktop ? "4 / 3" : undefined,
           }}
         >
