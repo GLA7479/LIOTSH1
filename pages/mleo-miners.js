@@ -1282,7 +1282,7 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
 
 // מרחק HUD מהחלק העליון: iOS = רק ה-safe-area, Android = הרבה יותר
 const HUD_TOP_IOS_PX = 0;     // לא לרדת בכלל (מעבר ל-safe-area)
-const HUD_TOP_ANDROID_PX = 80; // באנדרואיד לרדת הרבה (כוונן לפי הצורך)
+const HUD_TOP_ANDROID_PX = 30; // באנדרואיד לרדת הרבה (כוונן לפי הצורך)
 
 
   // ——— Track fullscreen state (משמש רק לעיצוב) ———
