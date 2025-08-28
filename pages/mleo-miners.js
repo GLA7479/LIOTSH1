@@ -1282,7 +1282,7 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
 
 // מרחק HUD מהחלק העליון: iOS = רק ה-safe-area, Android = הרבה יותר
 const HUD_TOP_IOS_PX = 0;     // לא לרדת בכלל (מעבר ל-safe-area)
-const HUD_TOP_ANDROID_PX = 30; // באנדרואיד לרדת הרבה (כוונן לפי הצורך)
+const HUD_TOP_ANDROID_PX = 20; // באנדרואיד לרדת הרבה (כוונן לפי הצורך)
 
 
   // ——— Track fullscreen state (משמש רק לעיצוב) ———
@@ -1460,12 +1460,6 @@ const HUD_TOP_ANDROID_PX = 30; // באנדרואיד לרדת הרבה (כוונ
           </div>
         )}
 
-        {/* ===== Title ===== */}
-        {!isFullscreen && (
-          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight mt-1 mb-4 leading-none">
-            MLEO Miners — v5.8
-          </h1>
-        )}
 
         {/* ===== Canvas wrapper ===== */}
         <div
@@ -1487,10 +1481,14 @@ const HUD_TOP_ANDROID_PX = 30; // באנדרואיד לרדת הרבה (כוונ
 <div
   className="absolute left-1/2 -translate-x-1/2 z-[30] w-[calc(100%-16px)] max-w-[980px]"
   style={{
-    // ב-iOS: רק safe-area; באנדרואיד: safe-area + מרחק גדול
     top: `calc(env(safe-area-inset-top, 0px) + ${(isIOS ? HUD_TOP_IOS_PX : HUD_TOP_ANDROID_PX)}px)`
   }}
 >
+  {/* כותרת בתוך הקאנבס */}
+  <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-center mb-2">
+    MLEO MINERS
+  </h1>
+
   <div className="flex gap-2 flex-wrap justify-center items-center text-sm">
     {/* Gold + ring */}
     <div className="px-2 py-1 bg-black/60 rounded-lg shadow flex items-center gap-2">
