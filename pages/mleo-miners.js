@@ -288,34 +288,44 @@ useEffect(() => {
   window.addEventListener("orientationchange", updateFlags);
   document.addEventListener("fullscreenchange", updateFlags);
 
-  // ===== Android fullscreen height fix (stretch wrapper to exact viewport) =====
+  // ===== Android fullscreen height fix (fit to available space inside the fullscreen root) =====
   const isAndroid = () => {
     try { return /Android/i.test(navigator.userAgent); } catch { return false; }
   };
-  const setWrapToViewport = () => {
+
+  const setWrapToAvailable = () => {
     const wrap = document.getElementById("miners-canvas-wrap");
-    if (!wrap) return;
-    const vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
-    wrap.style.minHeight = vh + "px";
-    wrap.style.height    = vh + "px";
+    const fsRoot = document.fullscreenElement; // אמור להיות wrapRef.current
+    if (!wrap || !fsRoot || !isAndroid()) return;
+
+    const rootRect = fsRoot.getBoundingClientRect();
+    const wrapRect = wrap.getBoundingClientRect();
+    // הגובה המדויק הזמין בתוך ה-root, מהחלק העליון של ה-wrap עד התחתית של ה-root
+    const available = Math.max(420, Math.floor(rootRect.bottom - wrapRect.top));
+
+    wrap.style.minHeight = available + "px";
+    wrap.style.height    = available + "px";
   };
+
   const restoreWrapHeight = () => {
     const wrap = document.getElementById("miners-canvas-wrap");
     if (!wrap) return;
     wrap.style.minHeight = "";
     wrap.style.height    = "";
   };
+
   const onFSChangeAndroid = () => {
     if (!isAndroid()) return;
-    if (document.fullscreenElement) setWrapToViewport();
+    if (document.fullscreenElement) setWrapToAvailable();
     else restoreWrapHeight();
   };
   const onVVResize = () => {
-    if (document.fullscreenElement && isAndroid()) setWrapToViewport();
+    if (document.fullscreenElement && isAndroid()) setWrapToAvailable();
   };
   const onOrientFS = () => {
-    if (document.fullscreenElement && isAndroid()) setWrapToViewport();
+    if (document.fullscreenElement && isAndroid()) setWrapToAvailable();
   };
+
   document.addEventListener("fullscreenchange", onFSChangeAndroid);
   if (window.visualViewport) window.visualViewport.addEventListener("resize", onVVResize);
   window.addEventListener("orientationchange", onOrientFS);
@@ -806,6 +816,7 @@ function tick(dt){
   s.lastSeen = now;
 }
 // === END PART 3 ===
+
 
 
 
