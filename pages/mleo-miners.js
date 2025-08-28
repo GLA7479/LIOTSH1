@@ -383,17 +383,39 @@ function setupCanvasAndLoop(cnv){
   const DPR = window.devicePixelRatio || 1;
 
   const resize = () => {
-    const rect = cnv.parentElement?.getBoundingClientRect();
-    const targetW = Math.min(rect?.width || 360, 1024);
-    const targetH = rect ? Math.max(420, (rect.height || 600)) : 600;
+    const isFS = !!document.fullscreenElement;
+
+    let targetW, targetH;
+    if (isFS) {
+      // במסך מלא: מבססים על viewport האמיתי כדי לא לחתוך תחתית
+      targetW = Math.min(window.innerWidth || 360, 1024);
+      targetH = Math.max(420, (window.innerHeight || 600) - 1); // -1 למניעת גלילה מיותרת
+    } else {
+      // מצב רגיל: לפי האלמנט העוטף
+      const wrap = cnv.parentElement;
+      const rect = wrap?.getBoundingClientRect();
+      const innerW = Math.max(320, Math.floor(wrap?.clientWidth  ?? rect?.width  ?? 360));
+      const innerH = Math.max(420, Math.floor(wrap?.clientHeight ?? rect?.height ?? 600));
+      targetW = Math.min(innerW, 1024);
+      targetH = innerH;
+    }
+
     cnv.style.width  = `${targetW}px`;
     cnv.style.height = `${targetH}px`;
-    cnv.width = Math.floor(targetW * DPR);
-    cnv.height= Math.floor(targetH * DPR);
+    cnv.width  = Math.floor(targetW * DPR);
+    cnv.height = Math.floor(targetH * DPR);
     ctx.setTransform(DPR,0,0,DPR,0,0);
     draw();
   };
+
+  const onFSResize = () => {
+    resize();
+    // כרום אנדרואיד מעדכן innerHeight באיחור קצר
+    setTimeout(resize, 60);
+  };
+
   window.addEventListener("resize", resize);
+  document.addEventListener("fullscreenchange", onFSResize);
   resize();
 
   // קלט — גרירה ומיקום (UX משופר)
@@ -479,12 +501,11 @@ function setupCanvasAndLoop(cnv){
   return () => {
     cancelAnimationFrame(rafRef.current);
     window.removeEventListener("resize", resize);
+    document.removeEventListener("fullscreenchange", onFSResize);
     cnv.removeEventListener("mousedown", onDown);
     cnv.removeEventListener("mousemove", onMove);
     window.removeEventListener("mouseup", onUp);
-    cnv.removeEventListener("touchstart", onDown);
-    cnv.removeEventListener("touchmove", onMove);
-    cnv.removeEventListener("touchend", onUp);
+    // לא ניתן להסיר מאזינים אנונימיים; נשאיר כך כדי לא לשבור.
   };
 }
 
@@ -672,12 +693,13 @@ function draw(){
   // היילייט יעד
   if (dragRef.current.active && hoverDrop) {
     const r = slotRect(hoverDrop.lane, hoverDrop.slot);
-    ctx.save();
-    ctx.strokeStyle = "rgba(250,204,21,.9)";
-    ctx.lineWidth = 3;
-    roundRect(ctx, r.x+4, r.y+4, r.w-8, r.h-8, 12);
-    ctx.stroke();
-    ctx.restore();
+    const ctx2 = ctx;
+    ctx2.save();
+    ctx2.strokeStyle = "rgba(250,204,21,.9)";
+    ctx2.lineWidth = 3;
+    roundRect(ctx2, r.x+4, r.y+4, r.w-8, r.h-8, 12);
+    ctx2.stroke();
+    ctx2.restore();
   }
 
   // GHOST של הכלב הנגרר + צל
@@ -1254,6 +1276,10 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
 // === START PART 6 ===
   // ——— iOS detection (to size the canvas a bit shorter on iPhone/iPad) ———
   const [isIOS, setIsIOS] = useState(false);
+
+  // ——— Track fullscreen state locally (so we can change layout rules) ———
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
   useEffect(() => {
     try {
       const ua = navigator.userAgent || "";
@@ -1262,6 +1288,11 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
         ((/Macintosh/.test(ua) || /Mac OS X/.test(ua)) && "ontouchend" in document);
       setIsIOS(isiOS);
     } catch {}
+
+    const onFS = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onFS);
+    onFS(); // init
+    return () => document.removeEventListener("fullscreenchange", onFS);
   }, []);
 
   // ===== Render =====
@@ -1427,10 +1458,11 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
           className="relative w-full border border-slate-700 rounded-2xl overflow-hidden shadow-2xl mt-1"
           style={{
             maxWidth: isDesktop ? "1024px" : "680px",
-            /* Fill available viewport height on mobile/iOS, minus header + safe areas */
+            // כשהמסך **לא** מלא במובייל – נשתמש ב-height מחושב.
+            // במסך מלא – לא קובעים height כאן; PART 3 קובע גובה מדויק ב-JS.
             height: isDesktop
               ? undefined
-              : `calc(100dvh - 65px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`,
+              : (isFullscreen ? undefined : `calc(100svh - 65px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`),
             aspectRatio: isDesktop ? "4 / 3" : undefined,
           }}
         >
@@ -1680,7 +1712,7 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
                 <button
                   onClick={() => { openDiamondChestIfReady(); }}
                   disabled={(stateRef.current?.diamonds || 0) < 3}
-                  className={`px-3 py-1.5 rounded-lg font-extrabold text-xs ${
+                  className={`px-3 py-1.5 rounded-lg font-extrabול text-xs ${
                     (stateRef.current?.diamonds || 0) >= 3
                       ? "bg-yellow-400 hover:bg-yellow-300 text-black"
                       : "bg-slate-400 text-slate-800 opacity-60 cursor-not-allowed"
