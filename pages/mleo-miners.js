@@ -1466,7 +1466,7 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
             // במסך מלא – לא קובעים height כאן; PART 3 קובע גובה מדויק ב-JS.
             height: isDesktop
               ? undefined
-              : (isFullscreen ? undefined : `calc(100dvh - 65px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`),
+              : (isFullscreen ? undefined : `calc(100dvh - 96px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`),
             aspectRatio: isDesktop ? "4 / 3" : undefined,
           }}
         >
