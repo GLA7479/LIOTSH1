@@ -1,28 +1,8 @@
-<<<<<<< HEAD
-=======
 // pages/api/gallery.js
->>>>>>> f2198a3 (Auto update and deploy)
 import fs from "fs";
 import path from "path";
 
 export default function handler(req, res) {
-<<<<<<< HEAD
-  const imagesDir = path.join(process.cwd(), "public/images");
-  const videosDir = path.join(process.cwd(), "public/videos");
-
-  const images = fs
-    .readdirSync(imagesDir)
-    .filter((file) => file.match(/\.(jpg|jpeg|png|webp)$/i));
-
-  const videos = fs
-    .readdirSync(videosDir)
-    .filter((file) => file.match(/\.(mp4|webm)$/i));
-
-  res.status(200).json({
-    images: images.map((file) => `/images/${file}`),
-    videos: videos.map((file) => `/videos/${file}`),
-  });
-=======
   const imagesDir = path.join(process.cwd(), "public/images2");
   const videosDir = path.join(process.cwd(), "public/videos2");
 
@@ -53,5 +33,4 @@ export default function handler(req, res) {
   }
 
   res.status(200).json({ images: imageFiles, videos: videoFiles });
->>>>>>> f2198a3 (Auto update and deploy)
 }

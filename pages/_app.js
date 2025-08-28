@@ -1,15 +1,5 @@
 // pages/_app.js
 import "../styles/globals.css";
-<<<<<<< HEAD
-import FloatingButton from "../components/FloatingButton"; // ✅ מייבאים את הכפתור
-
-export default function MyApp({ Component, pageProps }) {
-  return (
-    <>
-      <Component {...pageProps} />
-      <FloatingButton /> {/* ✅ הכפתור הצף */}
-    </>
-=======
 import "../i18n";
 import React, { useEffect } from "react";
 import { useRouter } from "next/router";
@@ -56,7 +46,6 @@ function MyApp({ Component, pageProps }) {
       {showIntro && <IntroOverlay />}
       <Component {...pageProps} />
     </SettingsProvider>
->>>>>>> f2198a3 (Auto update and deploy)
   );
 }
 
