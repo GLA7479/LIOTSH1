@@ -223,7 +223,7 @@ useEffect(() => {
   const loaded = loadSafe();
   const init = loaded ? { ...freshState(), ...loaded } : freshState();
 // אם אין minerScale בשמירה – קבע 1.5 כברירת־מחדל חדשה
-if (loaded && loaded.minerScale == null) init.minerScale = 1.5;
+if (loaded && loaded.minerScale == null) init.minerScale = 1.25;
 
 
   // עוגן עלות ראשוני
@@ -364,7 +364,7 @@ function freshState(){
     gold:0, spawnCost:50, dpsMult:1, goldMult:1,
 
     // >>> חדש: קנה מידה של הכלב (1 = 100%)
-    minerScale: 1.5,
+    minerScale: 1.25,
 
     anim:{ t:0, coins:[], hint:1, fx:[] },
     onceSpawned:false,
@@ -1325,7 +1325,7 @@ function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) r
 
 // מרחק HUD מהחלק העליון: iOS = רק ה-safe-area, Android = הרבה יותר
 const HUD_TOP_IOS_PX = 0;     // לא לרדת בכלל (מעבר ל-safe-area)
-const HUD_TOP_ANDROID_PX = 20; // באנדרואיד לרדת הרבה (כוונן לפי הצורך)
+const HUD_TOP_ANDROID_PX = 5; // באנדרואיד לרדת הרבה (כוונן לפי הצורך)
 
 
   // ——— Track fullscreen state (משמש רק לעיצוב) ———
@@ -1618,28 +1618,6 @@ const HUD_TOP_ANDROID_PX = 20; // באנדרואיד לרדת הרבה (כוונ
     >
       🟡 +10% (Cost {formatShort(goldCostNow)})
     </button>
-
-    {/* >>> חדש: בורר גודל הכלב */}
-    <div className="flex items-center gap-1 px-2 py-1 rounded-xl bg-black/60">
-      <span className="opacity-80">Size</span>
-      <select
-        defaultValue={String(stateRef.current?.minerScale || 1)}
-        onChange={e => {
-          const s = stateRef.current; if (!s) return;
-          s.minerScale = parseFloat(e.target.value) || 1;
-          save();
-          // טריגר רינדור קל
-          setUi(u => ({ ...u }));
-        }}
-        className="bg-black/40 border border-white/15 rounded-lg px-2 py-1 text-white"
-        title="Change miner size"
-      >
-        <option value="0.75">75%</option>
-        <option value="1">100%</option>
-        <option value="1.25">125%</option>
-        <option value="1.5">150%</option>
-      </select>
-    </div>
 
     {/* GAIN */}
     <button
