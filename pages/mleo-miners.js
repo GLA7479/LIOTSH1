@@ -142,7 +142,6 @@ export default function MleoMiners() {
 
   const [showHowTo, setShowHowTo] = useState(false);
   const [adWatching, setAdWatching] = useState(false);
-  // נשאיר הוק כדי לרנדר טיימר, אבל מקור האמת הוא stateRef.current.adCooldownUntil
   const [adCooldownUntil, setAdCooldownUntil] = useState(0);
   const [showAdModal, setShowAdModal] = useState(false);
   const [adVideoEnded, setAdVideoEnded] = useState(false);
@@ -156,6 +155,9 @@ export default function MleoMiners() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showMiningStats, setShowMiningStats] = useState(false);
 
+  // פופאפ מרכזי (למתנות + שבירת סלע) — נסגר אוטומטית
+  const [centerPopup, setCenterPopup] = useState(null);
+
   const [mounted, setMounted] = useState(false);
 
   const uiPulseAccumRef = useRef(0);
@@ -167,42 +169,44 @@ export default function MleoMiners() {
     try { const a = new Audio(src); a.volume = 0.35; a.play().catch(()=>{}); } catch {}
   };
 
-  // ── סטאבים/עזר כדי שהקובץ ירוץ גם בלי תלויות חיצוניות ──
+  // סגירת פופאפ אוטומטית
+  useEffect(() => {
+    if (!centerPopup) return;
+    const id = setTimeout(() => setCenterPopup(null), 1800);
+    return () => clearTimeout(id);
+  }, [centerPopup]);
+
+  // ── סטאבים/עזר ──
   function theStateFix_maybeMigrateLocalStorage(){ /* no-op safe */ }
+  function currentGiftIntervalSec(s){ return Math.max(5, Math.floor(s?.lastGiftIntervalSec || 20)); }
+  function getPhaseInfo(s, now = Date.now()){ const sec = currentGiftIntervalSec(s); return { index:0, into:0, remain:sec, intervalSec:sec }; }
 
-  function currentGiftIntervalSec(s){
-    return Math.max(5, Math.floor(s?.lastGiftIntervalSec || 20));
-  }
-
-  function getPhaseInfo(s, now = Date.now()){
-    const sec = currentGiftIntervalSec(s);
-    return { index:0, into:0, remain:sec, intervalSec:sec };
-  }
-
-  // איסוף מתנה מרכזי (כפתור 🎁) — משתמש בחישוב מתנה לפי כל הסלעים (PART 4)
+  // איסוף מתנה (כפתור 🎁) — לפי חלוקה שביקשת
   function grantGift(){
     const s = stateRef.current; if (!s) return;
-    const type = rollGiftType(); // PART 4
+    const type = rollGiftType(); // PART 6
 
     if (type === "coins") {
-      const base = Math.max(10, expectedGiftCoinReward(s)); // <<< שימוש בנוסחה החדשה
-      const gain = Math.round(base * 0.10); // 10%
+      const base = Math.max(10, expectedGiftCoinReward(s));
+      const gain = Math.round(base * 0.10);
       s.gold += gain;
       setUi(u => ({ ...u, gold: s.gold }));
-      setGiftToastWithTTL(`🎁 +${formatShort(gain)} coins`);
+      setCenterPopup({ text: `🎁 +${formatShort(gain)} coins`, id: Math.random() });
     } else if (type === "dog") {
-      const lvl = chooseGiftDogLevel(s); // PART 4
-      trySpawnDogOrConvert(s, lvl);      // PART 4
-      setGiftToastWithTTL(`🎁 Free Dog (LV ${lvl})`);
+      const lvl = chooseGiftDogLevelForRegularGift(s);
+      const ok = trySpawnDogOrConvert(s, lvl);
+      setCenterPopup({ text: ok ? `🎁 Free Dog (LV ${lvl})` : `🎁 Board full → converted to coins`, id: Math.random() });
     } else if (type === "dps") {
       s.dpsMult = +((s.dpsMult || 1) * 1.1).toFixed(3);
-      setGiftToastWithTTL(`🎁 DPS +10% (×${(s.dpsMult||1).toFixed(2)})`);
+      setCenterPopup({ text: `🎁 DPS +10% (×${(s.dpsMult||1).toFixed(2)})`, id: Math.random() });
     } else if (type === "gold") {
       s.goldMult = +((s.goldMult || 1) * 1.1).toFixed(3);
-      setGiftToastWithTTL(`🎁 GOLD +10% (×${(s.goldMult||1).toFixed(2)})`);
+      setCenterPopup({ text: `🎁 GOLD +10% (×${(s.goldMult||1).toFixed(2)})`, id: Math.random() });
+    } else if (type === "diamond") {
+      s.diamonds = (s.diamonds || 0) + 1;
+      setCenterPopup({ text: `🎁 +1 💎 (Diamonds: ${s.diamonds})`, id: Math.random() });
     }
 
-    // קבע מתנה הבאה
     s.giftReady = false;
     s.giftNextAt = Date.now() + currentGiftIntervalSec(s) * 1000;
     setGiftReadyFlag(false);
@@ -210,6 +214,7 @@ export default function MleoMiners() {
     save?.();
   }
 // === END PART 2 ===
+
 
 
 // === START PART 3 ===
@@ -625,32 +630,65 @@ function drawBg(ctx,b){
     ctx.fillStyle=g; ctx.fillRect(b.x,b.y,b.w,b.h);
   }
 }
+
 function drawRock(ctx,rect,rock){
-  const pct = Math.max(0, rock.hp/rock.maxHp);
+  // בטל צללים לחלוטין
+  ctx.shadowColor = "transparent";
+  ctx.shadowBlur  = 0;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+
+  const pct   = Math.max(0, rock.hp/rock.maxHp);
   const scale = 0.35 + 0.65*pct;
-  const img = getImg(IMG_ROCK);
-  const pad=6, fullW=rect.w-pad*2, fullH=rect.h-pad*2;
-  const rw=fullW*scale, rh=fullH*scale;
-  const cx=rect.x+rect.w/2, cy=rect.y+rect.h/2;
-  const dx=cx-rw/2, dy=cy-rh/2;
+
+  const img   = getImg(IMG_ROCK);
+  const pad   = 6;
+  const fullW = rect.w - pad*2;
+  const fullH = rect.h - pad*2;
+
+  const rw = fullW*scale, rh = fullH*scale;
+  const cx = rect.x + rect.w/2, cy = rect.y + rect.h/2;
+  const dx = cx - rw/2,           dy = cy - rh/2;
+
   if (img.complete && img.naturalWidth>0) ctx.drawImage(img,dx,dy,rw,rh);
   else { ctx.fillStyle="#6b7280"; ctx.fillRect(dx,dy,rw,rh); }
-  // HP bar
-  const bx=rect.x+pad, by=rect.y+4, barW=fullW, barH=6;
-  ctx.fillStyle="#0ea5e9"; ctx.fillRect(bx,by,barW*pct,barH);
-  ctx.strokeStyle="#082f49"; ctx.lineWidth=1; ctx.strokeRect(bx,by,barW,barH);
-  ctx.fillStyle="#e5e7eb"; ctx.font="bold 11px system-ui";
-  ctx.fillText(`Rock ${rock.idx+1}`, bx, by+16);
+
+  // פס חיים/ספירה – מוקטן עוד יותר (3px)
+ const by   = rect.y + 4;
+const barW = fullW * 0.75;                         // 25% קצר יותר
+const bx   = rect.x + pad + (fullW - barW) / 2;    // ממורכז אופקית
+const barH = 10;                                    // לא נוגעים בגובה
+
+  ctx.fillStyle   = "#0ea5e9";
+  ctx.fillRect(bx,by,barW*pct,barH);
+  ctx.strokeStyle = "#082f49";
+  ctx.lineWidth   = 1;
+  ctx.strokeRect(bx,by,barW,barH);
+
+  // כותרת הסלע ממורכזת מעל הפס
+  ctx.fillStyle    = "#e5e7eb";
+  ctx.font         = "bold 11px system-ui";
+  ctx.textAlign    = "center";
+  ctx.textBaseline = "bottom";
+  ctx.fillText(`Rock ${rock.idx+1}`, bx + barW/2, by - 2);
 }
+
 function drawMiner(ctx,lane,slot,m){
-  const r = slotRect(lane,slot);
+  const r  = slotRect(lane,slot);
   const cx = r.x + r.w*0.52;
   const cy = r.y + r.h*0.56;
 
-  // בסיס: 84% מהתא, מוכפל בסקייל מהסטייט
+  // קנה מידה
   const scale = (stateRef.current?.minerScale || 1);
-  const w = Math.min(r.w, r.h) * 0.84 * scale;
+  const w     = Math.min(r.w, r.h) * 0.84 * scale;
 
+  // בטל צללים לחלוטין
+  ctx.shadowColor = "transparent";
+  ctx.shadowBlur  = 0;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+
+  // הכלב
   const img = getImg(IMG_MINER);
   if (img.complete && img.naturalWidth>0) {
     const frame = Math.floor(((stateRef.current?.anim?.t)||0)*8)%4;
@@ -661,17 +699,22 @@ function drawMiner(ctx,lane,slot,m){
     ctx.beginPath(); ctx.arc(cx, cy, w*0.35, 0, Math.PI*2); ctx.fill();
   }
 
-  // תגית רמה — מתאימה את עצמה לגודל
-  const tagW = Math.max(30, w*0.45), tagH = Math.max(16, w*0.22);
-  ctx.fillStyle = "rgba(0,0,0,.6)";
-  ctx.fillRect(cx - w*0.5, cy - w*0.62, tagW, tagH);
-
-  ctx.fillStyle = "#fff";
-  ctx.font = `bold ${Math.max(10, Math.floor(tagH*0.7))}px system-ui`;
-  ctx.fillText(String(m.level), cx - w*0.5 + tagW*0.3, cy - w*0.62 + tagH*0.78);
+  // דרגת הכלב – בלי רקע/צל, קרובה עוד יותר לראש
+  const fontPx = Math.max(12, Math.floor(w*0.22));
+  ctx.fillStyle    = "#ffffff";
+  ctx.font         = `bold ${fontPx}px system-ui`;
+  ctx.textAlign    = "center";
+  ctx.textBaseline = "alphabetic";
+  ctx.fillText(String(m.level), cx, cy - w*0.20); // ← היה 0.30-
 }
 
 function drawPill(ctx,x,y,w,h,label,enabled=true){
+  // אין צללים גם בכפתור
+  ctx.shadowColor = "transparent";
+  ctx.shadowBlur  = 0;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+
   const g=ctx.createLinearGradient(x,y,x,y+h);
   if (enabled){ g.addColorStop(0,"#fef08a"); g.addColorStop(1,"#facc15"); }
   else{ g.addColorStop(0,"#475569"); g.addColorStop(1,"#334155"); }
@@ -695,20 +738,18 @@ function roundRect(ctx,x,y,w,h,r){
 function draw(){
   const c = canvasRef.current; if (!c) return;
   const ctx = c.getContext("2d"); if (!ctx) return;
-  const s = stateRef.current; if (!s) return;
+  const s = stateRef.current;   if (!s) return;
   const b = boardRect();
+
+  // איפוס צללים גורף לכל הפריים
+  ctx.shadowColor = "transparent";
+  ctx.shadowBlur  = 0;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
 
   drawBg(ctx,b);
 
-  // יעד פוטנציאלי תחת הסמן (אם גוררים)
-  let hoverDrop = null;
-  if (dragRef.current.active) {
-    const px = (dragRef.current.x ?? 0) + (dragRef.current.ox ?? 0);
-    const py = (dragRef.current.y ?? 0) + (dragRef.current.oy ?? 0);
-    hoverDrop = pickSlot(px, py);
-  }
-
-  // ציור פילי ADD, סלעים וכלבים — מסתירים את הכלב הנגרר
+  // ADD → סלעים → כלבים
   for (let l=0; l<LANES; l++){
     for (let k=0; k<SLOTS_PER_LANE; k++){
       const cell = s.lanes[l].slots[k];
@@ -721,25 +762,13 @@ function draw(){
     drawRock(ctx, rockRect(l), s.lanes[l].rock);
     for (let k=0; k<SLOTS_PER_LANE; k++){
       const cell = s.lanes[l].slots[k]; if (!cell) continue;
-      const m = s.miners[cell.id]; if (!m) continue;
-      if (dragRef.current.active && dragRef.current.id === m.id) continue; // הסתרת המקור בזמן גרירה
+      const m = s.miners[cell.id];      if (!m) continue;
+      if (dragRef.current.active && dragRef.current.id === m.id) continue;
       drawMiner(ctx,l,k,m);
     }
   }
 
-  // היילייט יעד
-  if (dragRef.current.active && hoverDrop) {
-    const r = slotRect(hoverDrop.lane, hoverDrop.slot);
-    const ctx2 = ctx;
-    ctx2.save();
-    ctx2.strokeStyle = "rgba(250,204,21,.9)";
-    ctx2.lineWidth = 3;
-    roundRect(ctx2, r.x+4, r.y+4, r.w-8, r.h-8, 12);
-    ctx2.stroke();
-    ctx2.restore();
-  }
-
-  // GHOST של הכלב הנגרר + צל
+  // GHOST גרירה — ללא צל/הילה
   if (dragRef.current.active) {
     const id = dragRef.current.id;
     const m  = s.miners[id];
@@ -751,19 +780,13 @@ function draw(){
       const scale = (stateRef.current?.minerScale || 1);
       const w  = baseW * scale;
 
-      // צל
-      ctx.save();
-      ctx.globalAlpha = 0.35;
-      ctx.fillStyle = "#000";
-      ctx.beginPath();
-      ctx.ellipse(gx, gy + w*0.40, w*0.55, w*0.18, 0, 0, Math.PI*2);
-      ctx.fill();
-      ctx.restore();
-
-      // הדמות
+      const img=getImg(IMG_MINER);
       ctx.save();
       ctx.globalAlpha = 0.9;
-      const img=getImg(IMG_MINER);
+      ctx.shadowColor = "transparent";
+      ctx.shadowBlur  = 0;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
       if (img.complete && img.naturalWidth>0) {
         const frame=Math.floor(((stateRef.current?.anim?.t)||0)*8)%4;
         const sw=img.width/4, sh=img.height;
@@ -773,11 +796,9 @@ function draw(){
         ctx.beginPath(); ctx.arc(gx,gy,(w*0.35),0,Math.PI*2); ctx.fill();
       }
       ctx.restore();
-
     }
   }
 }
-
 // ----- לוגיקת tick בסיסית -----
 function tick(dt){
   const s = stateRef.current; if (!s) return;
@@ -799,13 +820,17 @@ function tick(dt){
       const gain = Math.floor(rock.maxHp * GOLD_FACTOR * (s.goldMult||1));
       s.gold += gain; setUi(u => ({ ...u, gold:s.gold }));
       addPlayerScorePoints(s, gain);
+
+      // פופאפ מרכזי אוטומטי (נעלם לבד)
+      setCenterPopup({ text: `⛏️ +${formatShort(gain)} coins`, id: Math.random() });
+
       s.lanes[l].rockCount += 1;
       s.lanes[l].rock = newRock(l, s.lanes[l].rockCount);
       safeSave();
     }
   }
 
-  // gifts timer → מכין את כפתור 🎁
+  // gifts timer
   if (!s.giftReady) {
     if ((s.giftNextAt || 0) <= Date.now()) {
       s.giftReady = true;
@@ -813,13 +838,13 @@ function tick(dt){
     }
   }
 
-  // bank-dog: צבירה אונליין והפצה אם יש מקום
+  // בנק כלבים אוטומטי + הפצה
   if (s.autoDogLastAt == null) s.autoDogLastAt = Date.now();
   const elapsedSinceDog = Date.now() - (s.autoDogLastAt || Date.now());
-  if (elapsedSinceDog >= (typeof DOG_INTERVAL_SEC !== "undefined" ? DOG_INTERVAL_SEC : 900) * 1000) {
-    accrueBankDogsByElapsed(s, elapsedSinceDog); // PART 4
+  if (elapsedSinceDog >= (typeof DOG_INTERVAL_SEC !== "undefined" ? DOG_INTERVAL_SEC : 1800) * 1000) {
+    accrueBankDogsByElapsed(s, elapsedSinceDog);
   }
-  tryDistributeBankDog(s); // PART 4
+  tryDistributeBankDog(s);
 
   finalizeDailyRewardOncePerTick();
   s.lastSeen = now;
@@ -827,23 +852,19 @@ function tick(dt){
 // === END PART 5 ===
 
 
+
 // === START PART 6 ===
 // Helpers + save/load + purchases + reset + misc used by JSX
 
-// ── Basic math helpers ──
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // ── Count miners safely ──
-function countMiners(s) {
-  return s?.miners ? Object.keys(s.miners).length : 0;
-}
+function countMiners(s) { return s?.miners ? Object.keys(s.miners).length : 0; }
 
-// ── DPS per miner (uses your balance constants) ──
-function minerDps(level, mul = 1) {
-  return BASE_DPS * Math.pow(LEVEL_DPS_MUL, level - 1) * mul;
-}
+// ── DPS per miner ──
+function minerDps(level, mul = 1) { return BASE_DPS * Math.pow(LEVEL_DPS_MUL, level - 1) * mul; }
 
-// ── Lane DPS sum (used by expectedRockCoinReward/offline etc.) ──
+// ── Lane DPS sum ──
 function laneDpsSum(s, laneIdx) {
   if (!s) return 0;
   let dps = 0;
@@ -902,7 +923,7 @@ function makeFreshState() {
     diamonds: 0,
     nextDiamondPrize: rollDiamondPrize(),
 
-    // auto-dog
+    // auto-dog (30m) – בנק עד 6
     autoDogLastAt: now,
     autoDogBank: 0,
 
@@ -921,7 +942,7 @@ function save() {
       gold: s.gold, spawnCost: s.spawnCost, dpsMult: s.dpsMult, goldMult: s.goldMult,
       onceSpawned: s.onceSpawned,
 
-      // >>> חדש: קנה מידה של הכלב
+      // קנה מידה של הכלב
       minerScale: s.minerScale || 1,
 
       // offline
@@ -945,33 +966,19 @@ function save() {
       // pricing anchor
       costBase: s.costBase,
 
-      // ad cooldown (persist from state)
+      // ad cooldown
       adCooldownUntil: s.adCooldownUntil || 0,
     }));
   } catch {}
 }
-
-function load() {
-  try { const raw = localStorage.getItem(LS_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; }
-}
+function load() { try { const raw = localStorage.getItem(LS_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; } }
 
 // ── Costs ──
-function _baseCost(s) {
-  if (!s) return 160;
-  return Math.max(80, s.costBase || 120);
-}
-function _dpsCost(s) {
-  const base  = _baseCost(s);
-  const steps = Math.max(0, Math.round(((s?.dpsMult || 1) - 1) * 10)); // כל +10% = צעד
-  return Math.ceil(base * 2.0 * Math.pow(1.18, steps));
-}
-function _goldCost(s) {
-  const base  = _baseCost(s);
-  const steps = Math.max(0, Math.round(((s?.goldMult || 1) - 1) * 10));
-  return Math.ceil(base * 2.2 * Math.pow(1.18, steps));
-}
+function _baseCost(s) { if (!s) return 160; return Math.max(80, s.costBase || 120); }
+function _dpsCost(s)  { const base=_baseCost(s); const steps=Math.max(0, Math.round(((s?.dpsMult||1)-1)*10)); return Math.ceil(base*2.0*Math.pow(1.18,steps)); }
+function _goldCost(s) { const base=_baseCost(s); const steps=Math.max(0, Math.round(((s?.goldMult||1)-1)*10)); return Math.ceil(base*2.2*Math.pow(1.18,steps)); }
 
-// ── Expected reward for the *next* rock break ──
+// ── Expected reward for next rock ──
 function expectedRockCoinReward(s) {
   if (!s) return 0;
   let bestLane = 0, bestDps = 0;
@@ -991,8 +998,7 @@ function expectedRockCoinReward(s) {
   return Math.floor(rock.maxHp * GOLD_FACTOR * (s.goldMult || 1));
 }
 
-// ── NEW: Expected reward for GIFTS/ADS — לפי כל הסלעים במסך ──
-// נוסחה: הגדול ביותר + 50% מסכום שאר המסילות.
+// ── Gift coin baseline (לפי כל המסילות) ──
 function expectedGiftCoinReward(s) {
   if (!s) return 0;
   const mult = (s.goldMult || 1);
@@ -1001,20 +1007,18 @@ function expectedGiftCoinReward(s) {
     const rk = s.lanes[l].rock;
     vals.push(Math.floor(rk.maxHp * GOLD_FACTOR * mult));
   }
-  if (vals.length === 0) return 0;
+  if (!vals.length) return 0;
   const max = Math.max(...vals);
   const sum = vals.reduce((a,b)=>a+b,0);
   const others = sum - max;
-  return Math.floor(max + others * 0.5); // אפשר לכוונן משקל בקלות
+  return Math.floor(max + others * 0.5);
 }
 
 // ── UI toast helper ──
 function setGiftToastWithTTL(text, ttl = 3000) {
   const id = Math.random().toString(36).slice(2);
   setGiftToast?.({ text, id });
-  setTimeout(() => {
-    setGiftToast?.(cur => (cur && cur.id === id ? null : cur));
-  }, ttl);
+  setTimeout(() => { setGiftToast?.(cur => (cur && cur.id === id ? null : cur)); }, ttl);
 }
 
 // ── Spawn logic ──
@@ -1143,40 +1147,55 @@ async function resetGame() {
   save();
 }
 
-// ===== Gifts: weights & handlers =====
+// ===== Gifts: weights & handlers (עודכן לפי הבקשה) =====
+// 60% coins, 18% dog (spawnLevel-1), 8% dps, 8% gold, 6% diamond
 function rollGiftType() {
-  const r = Math.random();
-  if (r < 0.70) return "coins";
-  if (r < 0.90) return "dog";
-  if (r < 0.95) return "dps";
-  return "gold";
+  const r = Math.random() * 100;
+  if (r < 60) return "coins";
+  if (r < 78) return "dog";
+  if (r < 86) return "dps";
+  if (r < 94) return "gold";
+  return "diamond";
 }
-function chooseGiftDogLevel(s) {
-  const base = Math.max(1, (s.spawnLevel || 1) - 1);
-  const alt  = Math.max(1, base - 1);
-  const hasAlt = Object.values(s.miners || {}).some(m => m.level === alt);
-  return hasAlt ? alt : base;
+
+// מתנת כלב רגילה: תמיד spawnLevel-1
+function chooseGiftDogLevelForRegularGift(s) {
+  const sl = Math.max(1, s.spawnLevel || 1);
+  return Math.max(1, sl - 1);
 }
+
+// מתנת כלב תקופתית (כל 30 דק׳): ברירת־מחדל spawnLevel,
+// אבל ננסה קודם לייצר “מסלול מיזוג” אם יש יתמות ב־(spawnLevel-2)
+function chooseAutoDogLevel(s) {
+  const sl = Math.max(1, s.spawnLevel || 1);
+  const lvlMinus2 = Math.max(1, sl - 2);
+
+  // אם יש כלב ב-(sl-2) אבל רק אחד (אין לו בן זוג), עדיף להציב שם כדי לאפשר מיזוג עתידי
+  const countMinus2 = Object.values(s.miners || {}).filter(m => m.level === lvlMinus2).length;
+  if (countMinus2 === 1) return lvlMinus2;
+
+  // אחרת – רמת קנייה
+  return sl;
+}
+
+// יצירה/המרה אם מלא
 function trySpawnDogOrConvert(s, level) {
   if (countMiners(s) < MAX_MINERS) {
     const ok = spawnMiner(s, level);
-    if (!ok) {
-      const add = Math.max(10, s.spawnCost || 50);
-      s.gold += add; setUi(u => ({ ...u, gold: s.gold }));
-      setGiftToastWithTTL(`Board full → converted to +${formatShort(add)} coins`);
-    }
-  } else {
-    const add = Math.max(10, s.spawnCost || 50);
-    s.gold += add; setUi(u => ({ ...u, gold: s.gold }));
-    setGiftToastWithTTL(`Board full → converted to +${formatShort(add)} coins`);
+    if (ok) { save?.(); return true; }
   }
+  const add = Math.max(10, s.spawnCost || 50);
+  s.gold = (s.gold || 0) + add;
+  setUi(u => ({ ...u, gold: s.gold }));
+  setGiftToastWithTTL(`Board full → converted to +${formatShort(add)} coins`);
   save?.();
+  return false;
 }
 
-// ===== Auto-dog banking (every 15m, bank up to 6; offline accrue) =====
+// Auto-dog banking (כל 30 דק׳), cap 6
 function accrueBankDogsByElapsed(s, elapsedMs) {
   if (!s) return;
-  const total = (typeof DOG_INTERVAL_SEC !== "undefined" ? DOG_INTERVAL_SEC : 900) * 1000;
+  const total = (typeof DOG_INTERVAL_SEC !== "undefined" ? DOG_INTERVAL_SEC : 1800) * 1000;
   if (total <= 0) return;
   let add = Math.floor(elapsedMs / total);
   if (add <= 0) return;
@@ -1189,11 +1208,23 @@ function accrueBankDogsByElapsed(s, elapsedMs) {
     s.autoDogLastAt = Date.now();
   }
 }
+
+// הפצת כלבים מהבנק: רק אם יש סלוט פנוי *וגם* ההצבה מקדמת מיזוג; אחרת ממתין
 function tryDistributeBankDog(s) {
   if (!s) return;
   if ((s.autoDogBank || 0) <= 0) return;
-  if (countMiners(s) >= MAX_MINERS) return; // אין מקום — נשאר בבנק
-  const lvl = chooseGiftDogLevel(s);
+  if (countMiners(s) >= MAX_MINERS) return;
+
+  // בדיקה: האם יש יתמות ב-(spawnLevel-2) (בדיוק כלב אחד)? אם כן – נציב שם.
+  const lvl = chooseAutoDogLevel(s);
+
+  // אם רמת היעד לא משפרת מסלול מיזוג (למשל כבר יש 0 או >=2 באותה רמה),
+  // נשאיר בבנק עד שתיווצר היתכנות (כפי שביקשת).
+  if (lvl === Math.max(1, (s.spawnLevel||1) - 2)) {
+    const countAt = Object.values(s.miners || {}).filter(m => m.level === lvl).length;
+    if (countAt !== 1) return; // לא משפר → לחכות
+  }
+
   const ok = spawnMiner(s, lvl);
   if (ok) {
     s.autoDogBank -= 1;
@@ -1205,7 +1236,7 @@ function tryDistributeBankDog(s) {
 // ===== OFFLINE mining up to 12h =====
 function handleOfflineAccrual(s, elapsedMs) {
   if (!s) return 0;
-  // צבור כלבים אוטומטיים גם בזמן OFFLINE
+  // צבור כלבים אוטומטיים גם בזמן OFFLINE (30 דק׳)
   accrueBankDogsByElapsed(s, elapsedMs);
 
   const CAP_MS = 12 * 60 * 60 * 1000; // 12h
@@ -1225,11 +1256,9 @@ function handleOfflineAccrual(s, elapsedMs) {
     while (timeLeft > 0 && dps > 0) {
       const timeToBreak = hp / dps;
       if (timeToBreak > timeLeft) {
-        // לא מספיק זמן לשבירה מלאה
         hp -= dps * timeLeft;
         timeLeft = 0;
       } else {
-        // שברנו את הסלע
         totalCoins += Math.floor(maxHp * GOLD_FACTOR * (s.goldMult || 1));
         timeLeft -= timeToBreak;
         idx += 1;
@@ -1237,11 +1266,7 @@ function handleOfflineAccrual(s, elapsedMs) {
         hp = rk.hp; maxHp = rk.maxHp;
       }
     }
-// === END PART 6 ===
 
-
-// === START PART 7 ===
-    // עדכן מצב המסילה בהתאם לסימולציה
     s.lanes[lane].rock = { lane, idx, maxHp, hp: Math.max(1, Math.floor(hp)) };
     s.lanes[lane].rockCount = idx;
   }
@@ -1251,10 +1276,14 @@ function handleOfflineAccrual(s, elapsedMs) {
   }
   return totalCoins;
 }
+// === END PART 6 ===
 
+
+
+// === START PART 7 ===
 // ===== Diamonds chest (3×💎 to claim when you choose) =====
 function grantDiamondPrize(s, key) {
-  const base = Math.max(20, expectedGiftCoinReward(s)); // <<< גם היהלומים לפי כל הסלעים
+  const base = Math.max(20, expectedGiftCoinReward(s));
   if (key === "coins_x10")   { const g = base * 10;   s.gold += Math.round(g); setGiftToastWithTTL(`💎 +${formatShort(g)} coins`); }
   else if (key === "coins_x100") { const g = base * 100; s.gold += Math.round(g); setGiftToastWithTTL(`💎 +${formatShort(g)} coins`); }
   else if (key === "coins_x1000"){ const g = base * 1000; s.gold += Math.round(g); setGiftToastWithTTL(`💎 +${formatShort(g)} coins`); }
@@ -1277,25 +1306,70 @@ function openDiamondChestIfReady() {
 
 // HUD computed values + Gift heartbeat + EARN cooldown
 
-const DOG_INTERVAL_SEC = (typeof window !== "undefined" && window.DOG_INTERVAL_SEC) || 15*60;
+// ⏱️ מתנת כלב תקופתית: כל 30 דקות
+const DOG_INTERVAL_SEC = (typeof window !== "undefined" && window.DOG_INTERVAL_SEC) || 30*60;
 const DOG_BANK_CAP = (typeof window !== "undefined" && window.DOG_BANK_CAP) || 6;
 
 const _currentGiftIntervalSec = typeof currentGiftIntervalSec==="function"?currentGiftIntervalSec:(s)=>Math.max(5,Math.floor(s?.lastGiftIntervalSec||20));
 const _getPhaseInfo = typeof getPhaseInfo==="function"?getPhaseInfo:(s,now=Date.now())=>{ const sec=_currentGiftIntervalSec(s,now); return { index:0,into:0,remain:sec,intervalSec:sec }; };
 
 // heartbeat מתנות – רץ כל חצי שנייה
-useEffect(()=>{ const id=setInterval(()=>{ const s=stateRef.current; if(!s) return; const now=Date.now(); const intervalMs=_currentGiftIntervalSec(s)*1000; if(!s.giftNextAt){ s.giftNextAt=now+intervalMs; s.giftReady=false; save(); return; } if(!s.giftReady && s.giftNextAt<=now){ s.giftReady=true; setGiftReadyFlag(true); save(); }},500); return()=>clearInterval(id); },[]);
+useEffect(()=>{ 
+  const id=setInterval(()=>{ 
+    const s=stateRef.current; if(!s) return; 
+    const now=Date.now(); 
+    const intervalMs=_currentGiftIntervalSec(s)*1000; 
+    if(!s.giftNextAt){ 
+      s.giftNextAt=now+intervalMs; 
+      s.giftReady=false; 
+      save(); 
+      return; 
+    } 
+    if(!s.giftReady && s.giftNextAt<=now){ 
+      s.giftReady=true; 
+      setGiftReadyFlag(true); 
+      save(); 
+    }
+  },500); 
+  return()=>clearInterval(id); 
+},[]);
 
 // Phase label
 const phaseNow=(()=>{const s=stateRef.current; if(!s) return {index:0,intervalSec:20,remain:20}; return _getPhaseInfo(s,Date.now());})();
 const phaseLabel=`⏳ ${phaseNow.intervalSec}s gifts`;
 
 // progress rings
-const giftProgress=(()=>{ const s=stateRef.current; if(!s) return 0; if(s.giftReady) return 1; const now=Date.now(); const total=_currentGiftIntervalSec(s,now)*1000; const remain=Math.max(0,(s.giftNextAt||now)-now); return Math.max(0,Math.min(1,1-remain/total)); })();
-const dogProgress=(()=>{ const s=stateRef.current; if(!s) return 0; if((s.autoDogBank||0)>=DOG_BANK_CAP) return 1; const now=Date.now(); const total=DOG_INTERVAL_SEC*1000; const last=s.autoDogLastAt||now; const elapsed=Math.max(0,now-last); return Math.max(0,Math.min(1,elapsed/total)); })();
+const giftProgress=(()=>{ 
+  const s=stateRef.current; if(!s) return 0; 
+  if(s.giftReady) return 1; 
+  const now=Date.now(); 
+  const total=_currentGiftIntervalSec(s,now)*1000; 
+  const remain=Math.max(0,(s.giftNextAt||now)-now); 
+  return Math.max(0,Math.min(1,1-remain/total)); 
+})();
+const dogProgress=(()=>{ 
+  const s=stateRef.current; if(!s) return 0; 
+  if((s.autoDogBank||0)>=DOG_BANK_CAP) return 1; 
+  const now=Date.now(); 
+  const total=DOG_INTERVAL_SEC*1000; 
+  const last=s.autoDogLastAt||now; 
+  const elapsed=Math.max(0,now-last); 
+  return Math.max(0,Math.min(1,elapsed/total)); 
+})();
 
-// circleStyle
-function circleStyle(progress,withBg=true){ const p=Math.max(0,Math.min(1,Number(progress)||0)); const deg=Math.round(360*p); const base=withBg?"radial-gradient(circle at 50% 50%, rgba(0,0,0,0.35) 55%, transparent 56%)":"transparent"; return { backgroundImage:`${base}, conic-gradient(#facc15 ${deg}deg, rgba(255,255,255,0.14) 0deg)`, transition:"background-image 0.2s linear" }; }
+// החלף את הפונקציה circleStyle
+function circleStyle(progress){
+  const p   = Math.max(0, Math.min(1, Number(progress) || 0));
+  const deg = Math.round(360 * p);
+  return {
+    // רק הקטע הצבעוני, והשאר שקוף – בלי שום רדיאל/הילה
+    backgroundImage: `conic-gradient(#facc15 ${deg}deg, transparent 0)`,
+    backgroundColor: "transparent",
+    transition: "background-image 0.2s linear",
+  };
+}
+
+
 
 // ADD cooldown
 const sNow=stateRef.current;
@@ -1303,7 +1377,13 @@ const nowMs=Date.now();
 const cooldownUntil=sNow?.adCooldownUntil||0;
 const addRemainMs=mounted?Math.max(0,cooldownUntil-nowMs):Number.POSITIVE_INFINITY;
 const addProgress=mounted?1-Math.min(1,addRemainMs/(10*60*1000)):0;
-const addRemainLabel=(()=>{ if(!mounted) return "…"; if(addRemainMs<=0) return "READY"; const m=Math.floor(addRemainMs/60000); const s=Math.floor((addRemainMs%60000)/1000); return `${m}:${String(s).padStart(2,"0")}`;})();
+const addRemainLabel=(()=>{ 
+  if(!mounted) return "…"; 
+  if(addRemainMs<=0) return "READY"; 
+  const m=Math.floor(addRemainMs/60000); 
+  const s=Math.floor((addRemainMs%60000)/1000); 
+  return `${m}:${String(s).padStart(2,"0")}`;
+})();
 const addDisabled=addRemainMs>0||adWatching;
 
 // prices
@@ -1316,7 +1396,23 @@ const canBuyGold=!!sNow&&sNow.gold>=goldCostNow;
 const price=(n)=>formatShort(n??0);
 
 // EARN button
-function onAdd(){ try{play?.(S_CLICK);}catch{} const s=stateRef.current;if(!s) return; const now=Date.now(); if(now<(s.adCooldownUntil||0)){ const remain=Math.ceil(((s.adCooldownUntil||0)-now)/1000); const m=Math.floor(remain/60),sec=String(remain%60).padStart(2,"0"); if(typeof setGiftToast==="function"){ const id=Math.random().toString(36).slice(2); setGiftToast({text:`Ad bonus in ${m}:${sec}`,id}); setTimeout(()=>{setGiftToast(cur=>(cur&&cur.id===id?null:cur));},2000);} return; } setAdVideoEnded(false); setShowAdModal(true); }
+function onAdd(){ 
+  try{play?.(S_CLICK);}catch{} 
+  const s=stateRef.current;if(!s) return; 
+  const now=Date.now(); 
+  if(now<(s.adCooldownUntil||0)){ 
+    const remain=Math.ceil(((s.adCooldownUntil||0)-now)/1000); 
+    const m=Math.floor(remain/60),sec=String(remain%60).padStart(2,"0"); 
+    if(typeof setGiftToast==="function"){ 
+      const id=Math.random().toString(36).slice(2); 
+      setGiftToast({text:`Ad bonus in ${m}:${sec}`,id}); 
+      setTimeout(()=>{setGiftToast(cur=>(cur&&cur.id===id?null:cur));},2000);
+    } 
+    return; 
+  } 
+  setAdVideoEnded(false); 
+  setShowAdModal(true); 
+}
 // === END PART 7 ===
 
 
@@ -1452,7 +1548,7 @@ const HUD_TOP_ANDROID_PX = 5; // באנדרואיד לרדת הרבה (כוונ�
         {/* ADD Ad Modal */}
         {showAdModal && (
           <div className="fixed inset-0 z-[10000] bg-black/80 flex items-center justify-center p-4">
-            <div className="bg-white text-slate-900 max-w-md w-full rounded-2xl p-5 shadow-2xl">
+            <div className="bg-white text-slate-900 max-w-md w-full rounded-2xl p-5">
               <h2 className="text-xl font-extrabold mb-3">Watch to Earn</h2>
 
               <video
@@ -1478,8 +1574,7 @@ const HUD_TOP_ANDROID_PX = 5; // באנדרואיד לרדת הרבה (כוונ�
                     const gain = Math.round(base * 0.50); // 50%
                     s.gold += gain; setUi(u => ({ ...u, gold: s.gold }));
 
-                    // 10m cooldown
-                    const until = Date.now() + 10*60*1000;
+                    const until = Date.now() + 10*60*1000; // 10m cooldown
                     s.adCooldownUntil = until;
                     setAdCooldownUntil(until);
                     try {
@@ -1510,13 +1605,13 @@ const HUD_TOP_ANDROID_PX = 5; // באנדרואיד לרדת הרבה (כוונ�
         {/* ===== Canvas wrapper ===== */}
         <div
           id="miners-canvas-wrap"
-          className="relative w-full border border-slate-700 rounded-2xl overflow-hidden shadow-2xl mt-1"
+          className="relative w-full border border-slate-700 rounded-2xl overflow-hidden mt-1"
           style={{
             maxWidth: isDesktop ? "1024px" : "680px",
             height: isDesktop
               ? undefined
               : (isFullscreen
-                  ? "100vh" // במסך מלא – גובה מלא אמיתי
+                  ? "100vh"
                   : `calc(100svh - 65px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`),
             aspectRatio: isDesktop ? "4 / 3" : undefined,
           }}
@@ -1530,34 +1625,33 @@ const HUD_TOP_ANDROID_PX = 5; // באנדרואיד לרדת הרבה (כוונ�
     top: `calc(env(safe-area-inset-top, 0px) + ${(isIOS ? HUD_TOP_IOS_PX : HUD_TOP_ANDROID_PX)}px)`
   }}
 >
-  {/* כותרת בתוך הקאנבס */}
   <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-center mb-2">
     MLEO - MINERS
   </h1>
 
   <div className="flex gap-2 flex-wrap justify-center items-center text-sm">
-    {/* Gold + ring */}
-    <div className="px-2 py-1 bg-black/60 rounded-lg shadow flex items-center gap-2">
+    {/* Gold + ring (ללא shadow) */}
+    <div className="px-2 py-1  rounded-lg flex items-center gap-2">
       <div
         className="relative w-8 h-8 rounded-full grid place-items-center"
-        style={circleStyle(addProgress, true)}
+        style={circleStyle(addProgress)}
         title={addRemainMs > 0 ? `Next ad in ${addRemainLabel}` : "Ad bonus ready"}
       >
-        <div className="w-6 h-6 rounded-full bg-black/70 grid place-items-center">
+        <div className="w-6 h-6 rounded-full bg-black/100 grid place-items-center">
           <img src={IMG_COIN} alt="coin" className="w-4 h-4" />
         </div>
       </div>
       <b>{formatShort(stateRef.current?.gold ?? 0)}</b>
     </div>
 
-    <div className="px-2 py-1 bg-black/60 rounded-lg shadow">🪓 x<b>{(stateRef.current?.dpsMult || 1).toFixed(2)}</b></div>
-    <div className="px-2 py-1 bg-black/60 rounded-lg shadow">🟡 x<b>{(stateRef.current?.goldMult || 1).toFixed(2)}</b></div>
-    <div className="px-2 py-1 bg-black/60 rounded-lg shadow">🐶 LV <b>{stateRef.current?.spawnLevel || 1}</b></div>
+    <div className="px-2 py-1  rounded-lg">🪓 x<b>{(stateRef.current?.dpsMult || 1).toFixed(2)}</b></div>
+    <div className="px-2 py-1  rounded-lg">🟡 x<b>{(stateRef.current?.goldMult || 1).toFixed(2)}</b></div>
+    <div className="px-2 py-1  rounded-lg">🐶 LV <b>{stateRef.current?.spawnLevel || 1}</b></div>
 
-    {/* Diamonds counter (clickable) */}
+    {/* Diamonds counter */}
     <button
       onClick={() => setShowDiamondInfo(true)}
-      className="px-2 py-1 bg-black/70 rounded-lg shadow flex items-center gap-1 hover:bg-black/60 active:scale-95 transition cursor-pointer"
+      className="px-2 py-1  rounded-lg flex items-center gap-1 hover:bg-black/60 active:scale-95 transition"
       aria-label="Diamond rewards info"
       title="Tap to open Diamond chest"
     >
@@ -1566,34 +1660,34 @@ const HUD_TOP_ANDROID_PX = 5; // באנדרואיד לרדת הרבה (כוונ�
       <span className="opacity-80">/3</span>
     </button>
 
-    <div className="px-2 py-1 bg-black/60 rounded-lg shadow">{`⏳ ${(_getPhaseInfo(stateRef.current, Date.now()).intervalSec)}s gifts`}</div>
+    <div className="px-2 py-1  rounded-lg">{`⏳ ${(_getPhaseInfo(stateRef.current, Date.now()).intervalSec)}s gifts`}</div>
 
     <div className="flex items-center gap-3 ml-2">
       <div
         className="relative w-8 h-8 rounded-full grid place-items-center"
-        style={circleStyle(giftProgress, true)}
+        style={circleStyle(giftProgress)}
         title={`⏳ ${(_getPhaseInfo(stateRef.current, Date.now()).intervalSec)}s gifts`}
       >
-        <div className="w-6 h-6 rounded-full bg-black/70 grid place-items-center text-[10px] font-extrabold">🎁</div>
+        <div className="w-6 h-6 rounded-full bg-black/100 grid place-items-center text-[10px] font-extrabold">🎁</div>
       </div>
       <div
         className="relative w-8 h-8 rounded-full grid place-items-center"
-        style={circleStyle(dogProgress, true)}
+        style={circleStyle(dogProgress)}
         title="Auto-dog every 15m (bank up to 6)"
       >
-        <div className="w-6 h-6 rounded-full bg-black/70 grid place-items-center text-[10px] font-extrabold">🐶</div>
+        <div className="w-6 h-6 rounded-full bg-black/100 grid place-items-center text-[10px] font-extrabold">🐶</div>
       </div>
     </div>
   </div>
 
-  {/* Actions row */}
+  {/* Actions row (ללא shadow) */}
   <div className="flex gap-2 mt-2 flex-wrap justify-center text-sm">
     <button
       onClick={addMiner}
       disabled={!canBuyMiner}
-      className={`px-3 py-1.5 rounded-xl text-slate-900 font-bold shadow transition
+      className={`px-3 py-1.5 rounded-xl text-slate-900 font-bold transition
         ${canBuyMiner
-          ? "bg-emerald-500 hover:bg-emerald-400 ring-2 ring-emerald-300 shadow-[0_0_18px_rgba(16,185,129,.55)]"
+          ? "bg-emerald-500 hover:bg-emerald-400 ring-2 ring-emerald-300"
           : "bg-emerald-500 opacity-60 cursor-not-allowed"}`}
     >
       + 🐶 Miner (LV {stateRef.current?.spawnLevel || 1}) — {formatShort(spawnCostNow)}
@@ -1603,9 +1697,9 @@ const HUD_TOP_ANDROID_PX = 5; // באנדרואיד לרדת הרבה (כוונ�
       onClick={upgradeDps}
       disabled={!canBuyDps}
       className={`h-8 px-2.5 rounded-lg text-[13px] leading-none inline-flex items-center
-        text-slate-900 font-bold shadow-sm transition
+        text-slate-900 font-bold transition
         ${canBuyDps
-          ? "bg-sky-500 hover:bg-sky-400 ring-2 ring-sky-300 shadow-[0_0_18px_rgba(56,189,248,.55)]"
+          ? "bg-sky-500 hover:bg-sky-400 ring-2 ring-sky-300"
           : "bg-sky-500 opacity-60 cursor-not-allowed"}`}
     >
       🪓 +10% (Cost {formatShort(dpsCostNow)})
@@ -1614,9 +1708,9 @@ const HUD_TOP_ANDROID_PX = 5; // באנדרואיד לרדת הרבה (כוונ�
     <button
       onClick={upgradeGold}
       disabled={!canBuyGold}
-      className={`px-3 py-1.5 rounded-xl text-slate-900 font-bold shadow transition
+      className={`px-3 py-1.5 rounded-xl text-slate-900 font-bold transition
         ${canBuyGold
-          ? "bg-amber-400 hover:bg-amber-300 ring-2 ring-amber-300 shadow-[0_0_18px_rgba(251,191,36,.6)]"
+          ? "bg-amber-400 hover:bg-amber-300 ring-2 ring-amber-300"
           : "bg-amber-400 opacity-60 cursor-not-allowed"}`}
     >
       🟡 +10% (Cost {formatShort(goldCostNow)})
@@ -1626,10 +1720,10 @@ const HUD_TOP_ANDROID_PX = 5; // באנדרואיד לרדת הרבה (כוונ�
     <button
       onClick={onAdd}
       disabled={addDisabled}
-      className={`px-3 py-1.5 rounded-xl text-slate-900 font-bold shadow transition
+      className={`px-3 py-1.5 rounded-xl text-slate-900 font-bold transition
         ${addDisabled
           ? "bg-indigo-400 opacity-60 cursor-not-allowed"
-          : "bg-indigo-400 hover:bg-indigo-300 ring-2 ring-indigo-300 shadow-[0_0_18px_rgba(129,140,248,.45)]"}`}
+          : "bg-indigo-400 hover:bg-indigo-300 ring-2 ring-indigo-300"}`}
       title={addRemainMs > 0 ? `Ad bonus in ${addRemainLabel}` : "Watch ad to earn"}
     >
       GAIN {addRemainMs > 0 ? `(${addRemainLabel})` : ""}
@@ -1637,19 +1731,18 @@ const HUD_TOP_ANDROID_PX = 5; // באנדרואיד לרדת הרבה (כוונ�
 
     <button
       onClick={() => setShowResetConfirm(true)}
-      className="px-3 py-1.5 rounded-xl bg-rose-500 hover:bg-rose-400 text-white font-bold shadow transition ring-2 ring-rose-300"
+      className="px-3 py-1.5 rounded-xl bg-rose-500 hover:bg-rose-400 text-white font-bold transition ring-2 ring-rose-300"
       title="Reset all progress"
     >
       RESET
     </button>
   </div>
-
 </div>
 {/* === END PART 9 === */}
 
 
 {/* === START PART 10 === */}
-          {/* Toast (gift result) */}
+         {/* Toast קטן (אופציונלי) */}
           {giftToast && (
             <div className="absolute left-1/2 -translate-x-1/2 z-[7]" style={{ top: "200px" }}>
               <div className="px-4 py-2 rounded-xl bg-emerald-400 text-black font-extrabold shadow-lg animate-[fadeOut_3s_ease-out_forwards]">
@@ -1661,6 +1754,23 @@ const HUD_TOP_ANDROID_PX = 5; // באנדרואיד לרדת הרבה (כוונ�
                   15% { opacity: 1; transform: translateY(0) scale(1); }
                   80% { opacity: 1; }
                   100% { opacity: 0; transform: translateY(-10px) scale(0.98); }
+                }
+              `}</style>
+            </div>
+          )}
+
+          {/* פופאפ מרכזי – בלי OK, נעלם אוטומטית */}
+          {centerPopup && (
+            <div className="absolute inset-0 z-[10001] flex items-center justify-center pointer-events-none">
+              <div className="pointer-events-auto px-6 py-4 rounded-2xl font-extrabold text-black shadow-2xl bg-gradient-to-br from-yellow-300 to-amber-400 border border-yellow-200 text-center animate-[popfade_1.8s_ease-out_forwards]">
+                <div className="text-lg">{centerPopup.text}</div>
+              </div>
+              <style jsx global>{`
+                @keyframes popfade {
+                  0% { opacity: 0; transform: translateY(6px) scale(0.96); }
+                  15% { opacity: 1; transform: translateY(0) scale(1); }
+                  75% { opacity: 1; }
+                  100% { opacity: 0; transform: translateY(-6px) scale(0.98); }
                 }
               `}</style>
             </div>
@@ -1775,9 +1885,7 @@ const HUD_TOP_ANDROID_PX = 5; // באנדרואיד לרדת הרבה (כוונ�
               </ul>
 
               <div className="flex items-center justify-between">
-                <p className="text-gray-300 text-xs">
-                  Open when you have 3💎.
-                </p>
+                <p className="text-gray-300 text-xs">Open when you have 3💎.</p>
                 <button
                   onClick={() => { openDiamondChestIfReady(); }}
                   disabled={(stateRef.current?.diamonds || 0) < 3}
