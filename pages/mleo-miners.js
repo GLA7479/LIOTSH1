@@ -526,7 +526,12 @@ function laneRect(lane){
   const y = Math.max(b.y, Math.min(centerY - h*0.5, b.y + b.h - h));
   return { x:b.x, y, w:b.w, h };
 }
-function rockWidth(L){ return Math.min(L.w*0.16, Math.max(50, L.h*0.64)); }
+// היה: return Math.min(L.w*0.16, Math.max(50, L.h*0.64));
+function rockWidth(L){
+  // רחב יותר: 0.25 מרוחב המסילה, ומותר עד 0.9 מהגובה (או מינ' 60px)
+  return Math.min(L.w * 0.30, Math.max(80, L.h * 1.10));
+}
+
 function slotRect(lane,slot){
   const L = laneRect(lane);
   const rw = rockWidth(L);
