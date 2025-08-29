@@ -10,7 +10,7 @@ const LANES = 4;
 const SLOTS_PER_LANE = 4;
 const MAX_MINERS = LANES * SLOTS_PER_LANE;
 const PADDING = 6;
-const LS_KEY = "mleoMiners_v5_81_reset2";
+const LS_KEY = "mleoMiners_v5_81_reset1";
 
 // Assets
 const IMG_BG    = "/images/bg-cave.png";
@@ -222,9 +222,6 @@ useEffect(() => {
   // טען שמירה אם יש
   const loaded = loadSafe();
   const init = loaded ? { ...freshState(), ...loaded } : freshState();
-// אם אין minerScale בשמירה – קבע 1.5 כברירת־מחדל חדשה
-if (loaded && loaded.minerScale == null) init.minerScale = 1.5;
-
 
   // עוגן עלות ראשוני
   if (init.costBase == null) {
@@ -360,30 +357,21 @@ function freshState(){
       beltShift: 0,
     })),
     miners:{}, nextId:1,
-
     gold:0, spawnCost:50, dpsMult:1, goldMult:1,
-
-    // >>> חדש: קנה מידה של הכלב (1 = 100%)
-    minerScale: 1.5,
-
     anim:{ t:0, coins:[], hint:1, fx:[] },
     onceSpawned:false,
     totalPurchased:0, spawnLevel:1,
     lastSeen:now, pendingOfflineGold:0,
-
     // Gifts/diamonds
     cycleStartAt: now, lastGiftIntervalSec: 20,
     giftNextAt: now + 20000, giftReady:false,
     diamonds:0, nextDiamondPrize: rollDiamondPrize(),
-
     // Auto-dog
     autoDogLastAt: now, autoDogBank: 0,
-
     // ad cooldown (נשמר גם כאן אם נטען)
     adCooldownUntil: 0,
   };
 }
-
 function loadSafe(){
   try { const raw = localStorage.getItem(LS_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; }
 }
@@ -639,34 +627,21 @@ function drawRock(ctx,rect,rock){
   ctx.fillText(`Rock ${rock.idx+1}`, bx, by+16);
 }
 function drawMiner(ctx,lane,slot,m){
-  const r = slotRect(lane,slot);
-  const cx = r.x + r.w*0.52;
-  const cy = r.y + r.h*0.56;
-
-  // בסיס: 84% מהתא, מוכפל בסקייל מהסטייט
-  const scale = (stateRef.current?.minerScale || 1);
-  const w = Math.min(r.w, r.h) * 0.84 * scale;
-
-  const img = getImg(IMG_MINER);
+  const r=slotRect(lane,slot);
+  const cx=r.x+r.w*0.52, cy=r.y+r.h*0.56;
+  const w=Math.min(r.w,r.h)*0.84;
+  const img=getImg(IMG_MINER);
   if (img.complete && img.naturalWidth>0) {
-    const frame = Math.floor(((stateRef.current?.anim?.t)||0)*8)%4;
-    const sw = img.width/4, sh = img.height;
-    ctx.drawImage(img, frame*sw, 0, sw, sh, cx - w/2, cy - w/2, w, w);
+    const frame=Math.floor(((stateRef.current?.anim?.t)||0)*8)%4;
+    const sw=img.width/4, sh=img.height;
+    ctx.drawImage(img, frame*sw,0,sw,sh, cx-w/2,cy-w/2, w,w);
   } else {
-    ctx.fillStyle="#22c55e";
-    ctx.beginPath(); ctx.arc(cx, cy, w*0.35, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle="#22c55e"; ctx.beginPath(); ctx.arc(cx,cy,w*0.35,0,Math.PI*2); ctx.fill();
   }
-
-  // תגית רמה — מתאימה את עצמה לגודל
-  const tagW = Math.max(30, w*0.45), tagH = Math.max(16, w*0.22);
-  ctx.fillStyle = "rgba(0,0,0,.6)";
-  ctx.fillRect(cx - w*0.5, cy - w*0.62, tagW, tagH);
-
-  ctx.fillStyle = "#fff";
-  ctx.font = `bold ${Math.max(10, Math.floor(tagH*0.7))}px system-ui`;
-  ctx.fillText(String(m.level), cx - w*0.5 + tagW*0.3, cy - w*0.62 + tagH*0.78);
+  // level
+  ctx.fillStyle="rgba(0,0,0,.6)"; ctx.fillRect(cx-w*0.5, cy-w*0.62, 30, 16);
+  ctx.fillStyle="#fff"; ctx.font="bold 10px system-ui"; ctx.fillText(m.level, cx-w*0.5+9, cy-w*0.62+12);
 }
-
 function drawPill(ctx,x,y,w,h,label,enabled=true){
   const g=ctx.createLinearGradient(x,y,x,y+h);
   if (enabled){ g.addColorStop(0,"#fef08a"); g.addColorStop(1,"#facc15"); }
@@ -743,9 +718,7 @@ function draw(){
       const gx = (dragRef.current.x ?? 0) + (dragRef.current.ox ?? 0);
       const gy = (dragRef.current.y ?? 0) + (dragRef.current.oy ?? 0);
       const r0 = slotRect(m.lane, m.slot);
-      const baseW = Math.min(r0.w, r0.h) * 0.84;
-      const scale = (stateRef.current?.minerScale || 1);
-      const w  = baseW * scale;
+      const w  = Math.min(r0.w, r0.h) * 0.84;
 
       // צל
       ctx.save();
@@ -763,13 +736,13 @@ function draw(){
       if (img.complete && img.naturalWidth>0) {
         const frame=Math.floor(((stateRef.current?.anim?.t)||0)*8)%4;
         const sw=img.width/4, sh=img.height;
-        ctx.drawImage(img, frame*sw,0,sw,sh, gx-w/2, gy-w/2, w, w);
+        const ww = w*1.05;
+        ctx.drawImage(img, frame*sw,0,sw,sh, gx-ww/2, gy-ww/2, ww, ww);
       } else {
         ctx.fillStyle="#22c55e";
-        ctx.beginPath(); ctx.arc(gx,gy,(w*0.35),0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(gx,gy,(w*0.35)*1.05,0,Math.PI*2); ctx.fill();
       }
       ctx.restore();
-
     }
   }
 }
@@ -917,37 +890,26 @@ function save() {
       lanes: s.lanes, miners: s.miners, nextId: s.nextId,
       gold: s.gold, spawnCost: s.spawnCost, dpsMult: s.dpsMult, goldMult: s.goldMult,
       onceSpawned: s.onceSpawned,
-
-      // >>> חדש: קנה מידה של הכלב
-      minerScale: s.minerScale || 1,
-
       // offline
       lastSeen: s.lastSeen, pendingOfflineGold: s.pendingOfflineGold || 0,
-
       // buy-level
       totalPurchased: s.totalPurchased, spawnLevel: s.spawnLevel,
-
       // gifts
       cycleStartAt: s.cycleStartAt,
       lastGiftIntervalSec: s.lastGiftIntervalSec,
       giftNextAt: s.giftNextAt, giftReady: s.giftReady,
-
       // diamonds
       diamonds: s.diamonds || 0,
       nextDiamondPrize: s.nextDiamondPrize,
-
       // auto-dog
       autoDogLastAt: s.autoDogLastAt, autoDogBank: s.autoDogBank,
-
       // pricing anchor
       costBase: s.costBase,
-
       // ad cooldown (persist from state)
       adCooldownUntil: s.adCooldownUntil || 0,
     }));
   } catch {}
 }
-
 function load() {
   try { const raw = localStorage.getItem(LS_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; }
 }
@@ -1619,28 +1581,6 @@ const HUD_TOP_ANDROID_PX = 20; // באנדרואיד לרדת הרבה (כוונ
       🟡 +10% (Cost {formatShort(goldCostNow)})
     </button>
 
-    {/* >>> חדש: בורר גודל הכלב */}
-    <div className="flex items-center gap-1 px-2 py-1 rounded-xl bg-black/60">
-      <span className="opacity-80">Size</span>
-      <select
-        defaultValue={String(stateRef.current?.minerScale || 1)}
-        onChange={e => {
-          const s = stateRef.current; if (!s) return;
-          s.minerScale = parseFloat(e.target.value) || 1;
-          save();
-          // טריגר רינדור קל
-          setUi(u => ({ ...u }));
-        }}
-        className="bg-black/40 border border-white/15 rounded-lg px-2 py-1 text-white"
-        title="Change miner size"
-      >
-        <option value="0.75">75%</option>
-        <option value="1">100%</option>
-        <option value="1.25">125%</option>
-        <option value="1.5">150%</option>
-      </select>
-    </div>
-
     {/* GAIN */}
     <button
       onClick={onAdd}
@@ -1662,7 +1602,6 @@ const HUD_TOP_ANDROID_PX = 20; // באנדרואיד לרדת הרבה (כוונ
       RESET
     </button>
   </div>
-
 </div>
 
 
