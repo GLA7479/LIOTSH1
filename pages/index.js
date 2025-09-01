@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import PWAInstall from "../components/PWAInstall";
 
-const GAME_ENTRY_URL = "/mleo-miners"; // שנה אם עמוד הכניסה שלך אחר
+const GAME_ENTRY_URL = "/play"; // שנה אם עמוד הכניסה שלך אחר
 
 const SLOGANS = [
   "Ever wished you mined Bitcoin on day one? Start with MLEO today.",
