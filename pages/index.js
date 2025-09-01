@@ -5,36 +5,22 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import PWAInstall from "../components/PWAInstall";
 
-// ===== Supported locales =====
-const SUPPORTED = {
-  en: "English",
-  he: "עברית",
-  pt: "Português",
-  ja: "日本語",
-  zh: "简体中文",
-  ko: "한국어",
-};
+const GAME_ENTRY_URL = "/play"; // שנה אם צריך
 
-// ===== Translations (all strings, incl. HOW IT WORKS) =====
-const T = {
+// ===== Translations =====
+const TEXT = {
   en: {
-    brand: "MLEO",
-    heroTitleLine1: "Mine. Merge. Earn.",
-    heroTitleLine2: "Welcome to the MLEO Rush.",
-    newBadge: "New",
-    earlyBadge: "Early miners welcome",
-    startNow: "START NOW",
-    howItWorksBtn: "How it works",
-    teaserNote: "Teaser — the full experience starts when you hit START NOW.",
+    name: "English", dir: "ltr", code: "en",
+    new: "New", early: "Early miners welcome",
+    heroH1_1: "Mine. Merge. Earn.",
+    heroH1_2: "Welcome to the MLEO Rush.",
+    start: "START NOW",
+    how: "How it works",
     bullets: [
       "Fair, capped daily accrual",
       "Anti-abuse & soft limits",
       "Installable PWA",
     ],
-    footerTerms: "Terms",
-    footerPrivacy: "Privacy",
-    footerDocs: "Docs",
-    footerCopy: (y) => `© ${y} MLEO. All rights reserved.`,
     slogans: [
       "Ever wished you mined Bitcoin on day one? Start with MLEO today.",
       "Tap. Merge. Earn. Turn your play into MLEO.",
@@ -43,428 +29,736 @@ const T = {
       "No gas, no fuss (demo). Just mine and climb.",
       "Join early miners. Claim your share of the MLEO era.",
     ],
-    how: {
+    modal: {
       title: "How MLEO Accrual Works",
-      close: "Close",
-      s1t: "1) What you actually earn",
-      s1p:
-        "MLEO is a utility token earned through play. As you progress, a portion of your eligible in-game outcomes can translate into MLEO. The translation is variable, designed for fairness and long-term stability, and may change over time without prior notice.",
-      s2t: "2) Conversion (high level)",
-      s2l: [
-        "Only specific in-game events qualify for accrual.",
-        "The conversion uses internal balancing rules and doesn’t expose exact formulas or fixed rates.",
-        "Protective mechanisms (like soft-caps) gradually reduce accrual as you approach your personal daily range.",
-      ],
-      s3t: "3) Daily range & fairness",
-      s3l: [
-        "Each account has an internal daily range for accrual to help prevent abuse and keep things fair.",
-        "Approaching that range gradually tapers new accrual for the rest of the day.",
-        "Ranges and pacing can be adjusted over time for ecosystem health.",
-      ],
-      s4t: "4) Vault & Claim",
-      s4l: [
-        "Your accrued MLEO appears as a balance that you can CLAIM into your in-game Vault.",
-        "When/if on-chain claiming opens, additional unlock windows and eligibility checks may apply.",
-        "Until then, accrual remains an in-app utility balance for entertainment purposes.",
-      ],
-      s5t: "5) Activity when you’re away",
-      s5l: [
-        "Limited progress can accrue while offline at a reduced efficiency.",
-        "Exact behavior is dynamic and may change; it’s intended as a light boost, not a replacement for play.",
-      ],
-      s6t: "6) Important notes",
-      s6l: [
-        "Token availability, rates, caps and schedules are subject to change, pause or reset.",
-        "We may adjust balances to address bugs, exploits or abnormal activity.",
-        "Not financial advice. MLEO has no guaranteed monetary value.",
+      sections: [
+        {
+          t: "1) What you actually earn",
+          p: "MLEO is a utility token earned through play. Eligible in-game outcomes may translate into MLEO. Rates are variable for fairness and stability.",
+        },
+        {
+          t: "2) Conversion (high level)",
+          p: "Only specific actions qualify. The exact formulas are not public and can change.",
+        },
+        {
+          t: "3) Daily range & fairness",
+          p: "Accrual gradually tapers as you approach your personal daily range to prevent abuse and keep pacing healthy.",
+        },
+        {
+          t: "4) Vault & Claim",
+          p: "Your accrued balance can be CLAIMed to your in-app Vault. If on-chain claiming opens later, extra unlock windows and eligibility checks may apply.",
+        },
+        {
+          t: "5) When you’re away",
+          p: "Limited offline progress can accrue at reduced efficiency. It is a light boost, not a replacement for active play.",
+        },
+        {
+          t: "6) Important notes",
+          p: "Availability, rates and caps may change, pause or reset. Not financial advice; MLEO has no guaranteed monetary value.",
+        },
       ],
       cta: "START NOW",
+      close: "Close",
     },
+    footer: { terms: "Terms", privacy: "Privacy", docs: "Docs" },
   },
 
-  he: {
-    brand: "MLEO",
-    heroTitleLine1: "כרו. מיזגו. הרוויחו.",
-    heroTitleLine2: "ברוכים הבאים ל-MLEO Rush.",
-    newBadge: "חדש",
-    earlyBadge: "ברוכים הבאים לכורים הראשונים",
-    startNow: "התחילו עכשיו",
-    howItWorksBtn: "איך זה עובד",
-    teaserNote: "טיזר — החוויה המלאה מתחילה בלחיצה על \"התחילו עכשיו\".",
+he: {
+  name: "עברית", dir: "rtl", code: "he",
+  new: "חדש", early: "ברוכים הבאים לכורים הראשונים",
+  heroH1_1: "כרה. איחד. הרווח.",
+  heroH1_2: "ברוכים הבאים ל־MLEO Rush.",
+  start: "התחל עכשיו",
+  how: "איך זה עובד",
+  bullets: [
+    "צבירה יומית הוגנת ומוגבלת",
+    "מניעת ניצול ומגבלות רכות",
+    "אפליקציית PWA ניתנת להתקנה",
+  ],
+  slogans: [
+    "רצית לכרות ביטקוין כבר ביום הראשון? התחל היום עם MLEO.",
+    "הקש. איחד. הרווח. הפוך את המשחק ל־MLEO.",
+    "מהמם למכונה — כורים את העתיד עם Leo.",
+    "הנפקה הוגנת. תחרות אמיתית. כיף טהור.",
+    "בלי Gas ובלי בלאגן (דמו). רק לכרות ולהתקדם.",
+    "הצטרף לכורים המוקדמים. קבל את החלק שלך בעידן MLEO.",
+  ],
+  modal: {
+    title: "איך עובדת צבירת ה־MLEO",
+    sections: [
+      { t: "1) מה באמת מרוויחים", p: "‏MLEO הוא טוקן שימושי שנצבר דרך המשחק. תוצאות משחק כשירות עשויות להתמיר ל־MLEO. שיעורי ההמרה משתנים לטובת הוגנות ויציבות." },
+      { t: "2) המרה (בגדול)", p: "רק פעולות מסוימות נספרות. הנוסחאות המדויקות אינן פומביות ועלולות להשתנות." },
+      { t: "3) טווח יומי והוגנות", p: "הצבירה נחלשת בהדרגה ככל שמתקרבים לטווח היומי האישי, כדי למנוע ניצול ולשמור קצב בריא." },
+      { t: "4) Vault ו־CLAIM", p: "אפשר לבצע CLAIM ליתרה אל ה־Vault בתוך האפליקציה. אם ייפתח בהמשך Claim על השרשרת, עשויות לחול חלונות פתיחה ובדיקות זכאות נוספות." },
+      { t: "5) כשאתה לא בסביבה", p: "יש התקדמות מוגבלת גם כשהאפליקציה סגורה, ביעילות מופחתת." },
+      { t: "6) חשוב לדעת", p: "זמינות, שיעורים ותקרות עשויים להשתנות/להיעצר/להתאפס. לא ייעוץ פיננסי; ל־MLEO אין ערך מובטח." },
+    ],
+    cta: "התחל עכשיו",
+    close: "סגור",
+  },
+  footer: { terms: "תנאים", privacy: "פרטיות", docs: "מסמכים" },
+},
+
+
+  ar: {
+    name: "العربية", dir: "rtl", code: "ar",
+    new: "جديد", early: "مرحبًا بالمنقّبين الأوائل",
+    heroH1_1: "عدِّن. دمج. اربح.",
+    heroH1_2: "مرحبًا بك في اندفاعة MLEO.",
+    start: "ابدأ الآن",
+    how: "كيف يعمل",
     bullets: [
-      "צבירה יומית הוגנת ומוגבלת",
-      "הגנות אנטי-הונאה והפחתה רכה",
-      "אפליקציית PWA להתקנה",
+      "تراكم يومي عادل ومحدود",
+      "مكافحة إساءة الاستخدام وحدود لينة",
+      "تطبيق PWA قابِل للتثبيت",
     ],
-    footerTerms: "תנאים",
-    footerPrivacy: "פרטיות",
-    footerDocs: "מסמכים",
-    footerCopy: (y) => `©‏ ${y} ‏MLEO. כל הזכויות שמורות.`,
     slogans: [
-      "תמיד רציתם לכרות ביטקוין ביום הראשון? התחילו עם MLEO כבר היום.",
-      "לחצו. מיזגו. הרוויחו. הפכו את המשחק ל-MLEO.",
-      "מ'מם' למכונה — כורים את העתיד עם ליאו.",
-      "הנפקה הוגנת. תחרות אמיתית. כיף טהור.",
-      "בלי גז ובלי בלאגן (דמו). פשוט לכרות ולהתקדם.",
-      "הצטרפו לכורים הראשונים. תבעו את החלק שלכם בעידן MLEO.",
+      "تمنّيتَ لو عدّنتَ بتكوين من اليوم الأول؟ ابدأ مع MLEO اليوم.",
+      "اضغط. ادمج. اربح. حوّل لعبك إلى MLEO.",
+      "من الميم إلى الآلة — عدِّن المستقبل مع ليو.",
+      "إصدار عادل. منافسة حقيقية. متعة خالصة.",
+      "بدون Gas وبدون تعقيد (تجريبي). فقط عدِّن وتقدّم.",
+      "انضمّ إلى المعدّنين الأوائل. احصل على حصّتك من عصر MLEO.",
     ],
-    how: {
-      title: "איך צבירת MLEO עובדת",
-      close: "סגירה",
-      s1t: "1) מה באמת נצבר",
-      s1p:
-        "‏MLEO הוא טוקן שימושי שנצבר דרך המשחק. תוך כדי התקדמות, חלק מהתוצאות המזכות במשחק יכולות להתרגם ל-MLEO. ההמרה דינמית למען הוגנות ויציבות לטווח ארוך, ועשויה להשתנות ללא הודעה מוקדמת.",
-      s2t: "2) המרה (בגבוה)",
-      s2l: [
-        "רק אירועים מסוימים במשחק זכאים לצבירה.",
-        "ההמרה מתבססת על כללי איזון פנימיים ואינה חושפת נוסחאות או שיעורים קבועים.",
-        "מנגנוני הגנה (כמו soft-cap) מפחיתים בהדרגה את הקצב כשמתקרבים לטווח היומי האישי.",
+    modal: {
+      title: "كيف تعمل آلية اكتساب MLEO",
+      sections: [
+        { t: "1) ماذا تكسب فعليًا", p: "‏MLEO رمز منفعي يُكتسب عبر اللعب. قد تتحوّل بعض نتائج اللعب المؤهّلة إلى MLEO. المعدّلات متغيّرة لضمان العدالة والاستقرار." },
+        { t: "2) التحويل (نظرة عامة)", p: "تتأهّل إجراءات محدّدة فقط. الصيغ الدقيقة غير معلنة وقد تتغيّر." },
+        { t: "3) النطاق اليومي والعدالة", p: "‏يقلّ الاكتساب تدريجيًا كلما اقتربت من نطاقك اليومي الشخصي لمنع الإساءة والحفاظ على وتيرة صحية." },
+        { t: "4) الخزنة و«المطالبة»", p: "يمكنك «المطالبة» برصيدك إلى خزنتك داخل التطبيق. إن فُتح السحب على السلسلة لاحقًا فقد توجد نوافذ فتح إضافية ومتطلبات أهلية." },
+        { t: "5) أثناء غيابك", p: "يتحقق تقدّم محدود خارج الاتصال بكفاءةٍ أقل. الغرض منه دفعة خفيفة—not بديلًا عن اللعب النشط." },
+        { t: "6) ملاحظات مهمّة", p: "قد تتغيّر/تتوقّف/تُعاد المعدّلات والحدود. ليست نصيحة مالية؛ لا قيمة مضمونة لـ MLEO." },
       ],
-      s3t: "3) טווח יומי והוגנות",
-      s3l: [
-        "לכל חשבון טווח יומי פנימי לצבירה לשמירה על הוגנות ומניעת ניצול.",
-        "התקרבות לטווח מחלישה בהדרגה צבירה נוספת לאותו היום.",
-        "ניתן לכוונן טווחים וקצבים עם הזמן לפי צרכי המערכת.",
-      ],
-      s4t: "4) Vault ו-CLAIM",
-      s4l: [
-        "ה-MLEO שנצבר מופיע כיתרה שניתן ל-CLAIM אל ה-Vault בתוך המשחק.",
-        "אם/כשהמימוש און-צ'יין ייפתח, עשויים לחול חלונות שחרור ובדיקות כשירות נוספות.",
-        "עד אז, הצבירה נשארת כיתרת שימוש למשחק בלבד.",
-      ],
-      s5t: "5) פעילות כשאתם לא מחוברים",
-      s5l: [
-        "קיימת צבירה מוגבלת גם באופליין ביעילות מופחתת.",
-        "ההתנהגות דינמית ומשתנה; מטרתה דחיפה קלה, לא תחליף למשחק פעיל.",
-      ],
-      s6t: "6) חשוב לדעת",
-      s6l: [
-        "זמינות, שיעורים, תקרות ולוחות זמנים כפופים לשינוי/השהיה/איפוס.",
-        "ייתכנו התאמות ביתרות לטיפול בבאגים, ניצול או פעילות לא תקינה.",
-        "לא ייעוץ פיננסי. ל-MLEO אין ערך כספי מובטח.",
-      ],
-      cta: "התחילו עכשיו",
+      cta: "ابدأ الآن",
+      close: "إغلاق",
     },
+    footer: { terms: "الشروط", privacy: "الخصوصية", docs: "المستندات" },
   },
 
-  pt: {
-    brand: "MLEO",
-    heroTitleLine1: "Minerar. Fundir. Ganhar.",
-    heroTitleLine2: "Bem-vindo à corrida MLEO.",
-    newBadge: "Novo",
-    earlyBadge: "Primeiros mineradores são bem-vindos",
-    startNow: "COMEÇAR",
-    howItWorksBtn: "Como funciona",
-    teaserNote:
-      "Teaser — a experiência completa começa quando você clica em COMEÇAR.",
+  ru: {
+    name: "Русский", dir: "ltr", code: "ru",
+    new: "Новое", early: "Добро пожаловать ранним майнерам",
+    heroH1_1: "Майни. Объединяй. Зарабатывай.",
+    heroH1_2: "Добро пожаловать в MLEO Rush.",
+    start: "НАЧАТЬ",
+    how: "Как это работает",
     bullets: [
-      "Acúmulo diário justo e limitado",
-      "Anti-abuso e limites suaves",
-      "PWA instalável",
+      "Честное, ограниченное дневное начисление",
+      "Защита от злоупотреблений и мягкие лимиты",
+      "Устанавливаемый PWA",
     ],
-    footerTerms: "Termos",
-    footerPrivacy: "Privacidade",
-    footerDocs: "Documentos",
-    footerCopy: (y) => `© ${y} MLEO. Todos os direitos reservados.`,
     slogans: [
-      "Já quis minerar Bitcoin no primeiro dia? Comece com MLEO hoje.",
-      "Toque. Una. Ganhe. Converta seu jogo em MLEO.",
-      "Do meme à máquina — mine o futuro com Leo.",
-      "Emissão justa. Competição real. Diversão pura.",
-      "Sem gas, sem complicação (demo). Apenas minere e evolua.",
-      "Junte-se aos primeiros mineradores. Garanta sua parte da era MLEO.",
+      "Хотели бы майнить биткойн в первый день? Начните с MLEO уже сегодня.",
+      "Тапай. Объединяй. Зарабатывай. Преврати игру в MLEO.",
+      "От мема к машине — майнь будущее с Лео.",
+      "Честная эмиссия. Реальная конкуренция. Чистое удовольствие.",
+      "Без газа и суеты (демо). Просто майни и продвигайся.",
+      "Присоединяйся к ранним майнерам. Забери свою долю эпохи MLEO.",
     ],
-    how: {
-      title: "Como funciona o acúmulo de MLEO",
-      close: "Fechar",
-      s1t: "1) O que você realmente ganha",
-      s1p:
-        "MLEO é um token utilitário ganho jogando. Conforme avança, parte dos resultados elegíveis no jogo pode se converter em MLEO. A conversão é variável, projetada para justiça e estabilidade de longo prazo, e pode mudar sem aviso prévio.",
-      s2t: "2) Conversão (visão geral)",
-      s2l: [
-        "Apenas eventos específicos no jogo qualificam para acúmulo.",
-        "A conversão usa regras internas de balanceamento e não expõe fórmulas exatas nem taxas fixas.",
-        "Mecanismos de proteção (como limites suaves) reduzem gradualmente o acúmulo ao se aproximar da sua faixa diária.",
+    modal: {
+      title: "Как начисляется MLEO",
+      sections: [
+        { t: "1) Что вы реально получаете", p: "MLEO — утилитарный токен, заработанный в игре. Подходящие игровые результаты могут конвертироваться в MLEO. Ставки переменные для честности и стабильности." },
+        { t: "2) Конвертация (в общих чертах)", p: "Засчитываются только некоторые действия. Точные формулы не публичны и могут меняться." },
+        { t: "3) Суточный диапазон и честность", p: "Начисление плавно снижается при приближении к личному дневному диапазону, чтобы предотвратить злоупотребления." },
+        { t: "4) Хранилище и CLAIM", p: "Баланс можно забрать (CLAIM) в внутриигровой Vault. Если ончейн-вывод откроется позже, возможны дополнительные окна разблокировки и проверки." },
+        { t: "5) В ваше отсутствие", p: "Ограниченный офлайн-прогресс с пониженной эффективностью." },
+        { t: "6) Важное", p: "Доступность, ставки и лимиты могут изменяться/приостанавливаться/сбрасываться. Не финсовет; у MLEO нет гарантированной стоимости." },
       ],
-      s3t: "3) Faixa diária & justiça",
-      s3l: [
-        "Cada conta tem uma faixa diária interna para evitar abuso e manter a justiça.",
-        "Ao se aproximar dessa faixa, o novo acúmulo diminui gradualmente no restante do dia.",
-        "Faixas e ritmos podem ser ajustados ao longo do tempo para a saúde do ecossistema.",
-      ],
-      s4t: "4) Cofre & Claim",
-      s4l: [
-        "Seu MLEO acumulado aparece como saldo que você pode CLAIM para o Cofre do jogo.",
-        "Se/quando o claim on-chain abrir, podem existir janelas de desbloqueio e verificações adicionais.",
-        "Até lá, o acúmulo permanece como saldo utilitário no app para entretenimento.",
-      ],
-      s5t: "5) Quando você está ausente",
-      s5l: [
-        "Progresso limitado pode ocorrer offline com eficiência reduzida.",
-        "O comportamento é dinâmico e pode mudar; é um impulso leve, não um substituto do jogo ativo.",
-      ],
-      s6t: "6) Observações importantes",
-      s6l: [
-        "Disponibilidade, taxas, tetos e cronogramas podem mudar, pausar ou reiniciar.",
-        "Saldos podem ser ajustados para corrigir bugs, abusos ou atividade anormal.",
-        "Não é aconselhamento financeiro. MLEO não possui valor monetário garantido.",
-      ],
-      cta: "COMEÇAR",
+      cta: "НАЧАТЬ",
+      close: "Закрыть",
     },
+    footer: { terms: "Условия", privacy: "Конфиденциальность", docs: "Документация" },
   },
 
-  ja: {
-    brand: "MLEO",
-    heroTitleLine1: "採掘・合体・稼ぐ",
-    heroTitleLine2: "MLEOラッシュへようこそ。",
-    newBadge: "新着",
-    earlyBadge: "アーリーマイナー大歓迎",
-    startNow: "今すぐ開始",
-    howItWorksBtn: "仕組み",
-    teaserNote:
-      "ティーザー映像 — 本編は「今すぐ開始」を押すとスタートします。",
-    bullets: ["公正で日次上限付きの獲得", "不正対策・ソフト上限", "インストール可能なPWA"],
-    footerTerms: "利用規約",
-    footerPrivacy: "プライバシー",
-    footerDocs: "ドキュメント",
-    footerCopy: (y) => `© ${y} MLEO. All rights reserved.`,
-    slogans: [
-      "ビットコインを初日に採掘したかった？ MLEOで今日から。",
-      "タップ、合体、獲得。遊びをMLEOに変えよう。",
-      "ミームからマシンへ — Leoと未来を掘る。",
-      "公正なエミッション。真の競争。ピュアな楽しさ。",
-      "ガス不要、面倒なし（デモ）。採掘して上へ。",
-      "アーリーマイナーに参加しよう。MLEO時代のシェアを確保せよ。",
+  es: {
+    name: "Español", dir: "ltr", code: "es",
+    new: "Nuevo", early: "Bienvenidos los primeros mineros",
+    heroH1_1: "Minar. Fusionar. Ganar.",
+    heroH1_2: "Bienvenido a la fiebre MLEO.",
+    start: "EMPEZAR",
+    how: "Cómo funciona",
+    bullets: [
+      "Acumulación diaria justa con límite",
+      "Anti-abuso y límites graduales",
+      "PWA instalable",
     ],
-    how: {
-      title: "MLEOの獲得メカニズム",
-      close: "閉じる",
-      s1t: "1) 実際に得られるもの",
-      s1p:
-        "MLEO はプレイを通じて得られるユーティリティトークンです。進行に伴い、条件を満たすゲーム内成果の一部が MLEO に変換されます。変換は可変で、公平性と長期安定性のために設計され、予告なく変更される場合があります。",
-      s2t: "2) 変換（概要）",
-      s2l: [
-        "特定のゲーム内イベントのみが対象です。",
-        "内部バランス規則に基づき、正確な式や固定レートは公開しません。",
-        "ソフトキャップ等の保護により、日次上限に近づくと徐々に獲得が減少します。",
+    slogans: [
+      "¿Ojalá hubieras minado Bitcoin el día uno? Empieza con MLEO hoy.",
+      "Toca. Funde. Gana. Convierte tu juego en MLEO.",
+      "Del meme a la máquina — mina el futuro con Leo.",
+      "Emisión justa. Competencia real. Diversión pura.",
+      "Sin gas ni líos (demo). Solo mina y sube.",
+      "Únete a los primeros mineros. Reclama tu parte de la era MLEO.",
+    ],
+    modal: {
+      title: "Cómo se acumula MLEO",
+      sections: [
+        { t: "1) Lo que realmente ganas", p: "MLEO es un token utilitario ganado jugando. Ciertos resultados elegibles pueden convertirse en MLEO. Las tasas son variables por equidad y estabilidad." },
+        { t: "2) Conversión (alto nivel)", p: "Solo cuentan acciones específicas. Las fórmulas exactas no son públicas y pueden cambiar." },
+        { t: "3) Rango diario y equidad", p: "La acumulación se atenúa gradualmente al acercarte a tu rango diario personal para evitar abusos." },
+        { t: "4) Bóveda y «CLAIM»", p: "Puedes RECLAMAR el saldo a tu Bóveda en la app. Si se abre el claim on-chain, puede tener ventanas y requisitos extra." },
+        { t: "5) Cuando estás ausente", p: "Progreso limitado offline con eficiencia reducida." },
+        { t: "6) Notas importantes", p: "Disponibilidad, tasas y topes pueden cambiarse/pausarse/restablecerse. No es asesoría financiera; MLEO no tiene valor garantizado." },
       ],
-      s3t: "3) 日次レンジと公平性",
-      s3l: [
-        "アカウントごとに不正防止と公平性のための内部日次レンジがあります。",
-        "そのレンジに近づくほど、その日の新規獲得は段階的に抑制されます。",
-        "レンジやペースはエコシステム維持のため随時調整される場合があります。",
-      ],
-      s4t: "4) VaultとCLAIM",
-      s4l: [
-        "獲得した MLEO は残高として表示され、ゲーム内の Vault に CLAIM できます。",
-        "オンチェーンの請求が開放される場合、追加のロック解除期間や適格性チェックが適用されることがあります。",
-        "それまでは、娯楽目的のアプリ内ユーティリティ残高です。",
-      ],
-      s5t: "5) 不在時の挙動",
-      s5l: [
-        "オフライン中も効率を抑えた限定的な進行が発生する場合があります。",
-        "挙動は動的で変更される可能性があり、あくまで軽いブーストです。",
-      ],
-      s6t: "6) 重要事項",
-      s6l: [
-        "利用可否、レート、上限、スケジュールは変更・一時停止・リセットされる場合があります。",
-        "バグや不正等への対処として残高を調整することがあります。",
-        "これは投資助言ではありません。MLEO に保証された金銭的価値はありません。",
-      ],
-      cta: "今すぐ開始",
+      cta: "EMPEZAR",
+      close: "Cerrar",
     },
+    footer: { terms: "Términos", privacy: "Privacidad", docs: "Docs" },
+  },
+
+  fr: {
+    name: "Français", dir: "ltr", code: "fr",
+    new: "Nouveau", early: "Bienvenue aux premiers mineurs",
+    heroH1_1: "Miner. Fusionner. Gagner.",
+    heroH1_2: "Bienvenue dans la ruée MLEO.",
+    start: "COMMENCER",
+    how: "Comment ça marche",
+    bullets: [
+      "Accumulation quotidienne équitable et plafonnée",
+      "Anti-abus & limites progressives",
+      "PWA installable",
+    ],
+    slogans: [
+      "Vous auriez voulu miner le Bitcoin dès le premier jour ? Commencez avec MLEO aujourd’hui.",
+      "Tapez. Fusionnez. Gagnez. Transformez votre jeu en MLEO.",
+      "Du mème à la machine — minez le futur avec Leo.",
+      "Émission équitable. Vraie compétition. Plaisir pur.",
+      "Sans gas ni prise de tête (démo). Minez et progressez.",
+      "Rejoignez les premiers mineurs. Réclamez votre part de l’ère MLEO.",
+    ],
+    modal: {
+      title: "Comment s’accumule MLEO",
+      sections: [
+        { t: "1) Ce que vous gagnez vraiment", p: "MLEO est un jeton utilitaire gagné en jouant. Certains résultats éligibles peuvent se convertir en MLEO. Les taux sont variables pour l’équité et la stabilité." },
+        { t: "2) Conversion (vue d’ensemble)", p: "Seules des actions spécifiques sont prises en compte. Les formules exactes ne sont pas publiques et peuvent évoluer." },
+        { t: "3) Plage quotidienne & équité", p: "L’accumulation diminue progressivement à l’approche de votre plage quotidienne afin d’éviter les abus." },
+        { t: "4) Coffre & « CLAIM »", p: "Vous pouvez REVENDIQUER votre solde dans votre coffre in-app. Si un claim on-chain ouvre plus tard, des fenêtres de déblocage et vérifications peuvent s’appliquer." },
+        { t: "5) Quand vous êtes absent", p: "Un progrès hors-ligne limité à efficacité réduite." },
+        { t: "6) Notes importantes", p: "Disponibilité, taux et plafonds peuvent changer/pauser/réinitialiser. Pas un conseil financier ; MLEO n’a pas de valeur garantie." },
+      ],
+      cta: "COMMENCER",
+      close: "Fermer",
+    },
+    footer: { terms: "Conditions", privacy: "Confidentialité", docs: "Docs" },
+  },
+
+  de: {
+    name: "Deutsch", dir: "ltr", code: "de",
+    new: "Neu", early: "Frühe Miner willkommen",
+    heroH1_1: "Minen. Kombinieren. Verdienen.",
+    heroH1_2: "Willkommen beim MLEO-Rush.",
+    start: "JETZT STARTEN",
+    how: "So funktioniert es",
+    bullets: [
+      "Faire, gedeckelte tägliche Akkumulation",
+      "Missbrauchsschutz & weiche Limits",
+      "Installierbare PWA",
+    ],
+    slogans: [
+      "Gewünscht, am ersten Tag Bitcoin gemined zu haben? Starte heute mit MLEO.",
+      "Tippen. Kombinieren. Verdienen. Mach dein Spiel zu MLEO.",
+      "Vom Meme zur Maschine — mine die Zukunft mit Leo.",
+      "Faire Emission. Echter Wettbewerb. Reiner Spaß.",
+      "Ohne Gas, ohne Stress (Demo). Einfach minen und aufsteigen.",
+      "Schließe dich den frühen Minern an. Hol dir deinen Anteil der MLEO-Ära.",
+    ],
+    modal: {
+      title: "So entsteht dein MLEO-Zuwachs",
+      sections: [
+        { t: "1) Was du wirklich erhältst", p: "MLEO ist ein Utility-Token, der durchs Spielen entsteht. Geeignete Spielereignisse können in MLEO umgewandelt werden. Raten sind variabel für Fairness und Stabilität." },
+        { t: "2) Umrechnung (High-Level)", p: "Nur bestimmte Aktionen zählen. Exakte Formeln sind nicht öffentlich und können sich ändern." },
+        { t: "3) Tageskorridor & Fairness", p: "Die Zunahme flacht ab, je näher du deinem persönlichen Tageskorridor kommst, um Missbrauch zu verhindern." },
+        { t: "4) Vault & „CLAIM“", p: "Du kannst dein Guthaben in deinen In-App-Vault CLAIMen. On-Chain-Claims könnten später zusätzliche Freischaltfenster und Prüfungen haben." },
+        { t: "5) In deiner Abwesenheit", p: "Begrenzter Offline-Fortschritt mit reduzierter Effizienz." },
+        { t: "6) Wichtige Hinweise", p: "Verfügbarkeit, Raten und Limits können sich ändern/pausieren/zurücksetzen. Keine Finanzberatung; MLEO hat keinen garantierten Wert." },
+      ],
+      cta: "JETZT STARTEN",
+      close: "Schließen",
+    },
+    footer: { terms: "Bedingungen", privacy: "Datenschutz", docs: "Doku" },
   },
 
   zh: {
-    brand: "MLEO",
-    heroTitleLine1: "挖矿·合成·赚取",
-    heroTitleLine2: "欢迎加入 MLEO 热潮。",
-    newBadge: "全新",
-    earlyBadge: "欢迎早期矿工",
-    startNow: "立即开始",
-    howItWorksBtn: "如何运作",
-    teaserNote: "预告片 — 点击“立即开始”即可体验完整内容。",
-    bullets: ["公平且有日上限的积累", "反作弊与软上限", "可安装的 PWA"],
-    footerTerms: "条款",
-    footerPrivacy: "隐私",
-    footerDocs: "文档",
-    footerCopy: (y) => `© ${y} MLEO. 保留所有权利。`,
+    name: "中文", dir: "ltr", code: "zh",
+    new: "新", early: "欢迎早期矿工",
+    heroH1_1: "挖矿·合成·赚取",
+    heroH1_2: "欢迎来到 MLEO 热潮。",
+    start: "立即开始",
+    how: "如何运作",
+    bullets: [
+      "公平且有上限的日积累",
+      "反滥用与柔性限额",
+      "可安装的 PWA",
+    ],
     slogans: [
-      "是否想过在第一天就挖到比特币？现在就从 MLEO 开始。",
-      "点击、合成、赚取。把你的游玩转化为 MLEO。",
-      "从梗到引擎 —— 和 Leo 一起挖掘未来。",
+      "是否希望第一天就能挖比特币？现在就用 MLEO 开始。",
+      "点按、合成、赚取。把你的玩法转化为 MLEO。",
+      "从梗到引擎——与 Leo 一起开采未来。",
       "公平发行。真实竞争。纯粹乐趣。",
-      "无 Gas、无繁琐（演示）。只需挖矿、升级。",
+      "无 Gas、零麻烦（演示）。只管挖、一路升级。",
       "加入早期矿工。领取你在 MLEO 时代的份额。",
     ],
-    how: {
-      title: "MLEO 的积累机制",
-      close: "关闭",
-      s1t: "1) 你真正获得的是什么",
-      s1p:
-        "MLEO 是通过游玩获得的实用型代币。随着进度推进，部分符合条件的游戏结果会转化为 MLEO。转化是可变的，为公平与长期稳定而设计，可能随时调整且恕不另行通知。",
-      s2t: "2) 转化（高层说明）",
-      s2l: [
-        "仅特定的游戏事件符合积累资格。",
-        "转化基于内部平衡规则，不公开具体公式或固定比率。",
-        "保护机制（如软上限）会在接近日度范围时逐步降低新的积累。",
-      ],
-      s3t: "3) 日度范围与公平",
-      s3l: [
-        "每个账户都有内部日度范围，以防滥用并保持公平。",
-        "接近该范围时，当天的新积累会逐步放缓。",
-        "为生态健康，范围与节奏可能随时间调整。",
-      ],
-      s4t: "4) 保险库（Vault）与领取（Claim）",
-      s4l: [
-        "已积累的 MLEO 会显示为余额，你可以领取（CLAIM）到游戏内的 Vault。",
-        "当/如果开放上链领取，可能会有额外的解锁窗口与资格校验。",
-        "在此之前，积累仍是应用内的娱乐性实用余额。",
-      ],
-      s5t: "5) 你离线时",
-      s5l: [
-        "离线状态下可能以较低效率获得有限的进度。",
-        "具体行为是动态可变的，仅作为轻度加成，并非替代主动游玩。",
-      ],
-      s6t: "6) 重要提示",
-      s6l: [
-        "可用性、比率、上限与时间表可能变更、暂停或重置。",
-        "我们可能为修复漏洞、应对作弊或异常而调整余额。",
-        "非投资建议。MLEO 不保证任何货币价值。",
+    modal: {
+      title: "MLEO 积累机制",
+      sections: [
+        { t: "1) 你实际获得什么", p: "MLEO 是通过游戏获得的功能型代币。符合条件的游戏结果可能转换为 MLEO。为保证公平与稳定，转换率是可变的。" },
+        { t: "2) 转换（高层概览）", p: "只有特定行为计入。具体公式不公开，且可能调整。" },
+        { t: "3) 每日范围与公平", p: "当接近你的个人每日范围时，积累会逐步放缓，以防滥用并保持健康节奏。" },
+        { t: "4) 保险库与领取", p: "你可将余额「领取」至应用内保险库。若日后开放上链领取，可能需额外解锁窗口与资格校验。" },
+        { t: "5) 离线时", p: "有限的离线进度会以较低效率累计。" },
+        { t: "6) 重要说明", p: "可用性、费率与上限可能变更/暂停/重置。非财务建议；MLEO 不保证具有货币价值。" },
       ],
       cta: "立即开始",
+      close: "关闭",
     },
+    footer: { terms: "条款", privacy: "隐私", docs: "文档" },
+  },
+
+  ja: {
+    name: "日本語", dir: "ltr", code: "ja",
+    new: "新着", early: "初期マイナー歓迎",
+    heroH1_1: "採掘・マージ・アーン",
+    heroH1_2: "MLEO ラッシュへようこそ。",
+    start: "今すぐ開始",
+    how: "仕組み",
+    bullets: [
+      "公平で上限のある日次蓄積",
+      "不正対策とソフト上限",
+      "インストール可能なPWA",
+    ],
+    slogans: [
+      "初日からビットコインを採掘したかった？ いま MLEO で始めよう。",
+      "タップ → マージ → アーン。遊びを MLEO に変える。",
+      "ミームからマシンへ — Leo と未来を採掘。",
+      "公正な発行。真の競争。純粋な楽しさ。",
+      "ガス不要、面倒なし（デモ）。掘って、強くなるだけ。",
+      "早期マイナーに参加しよう。MLEO 時代の取り分を手に。",
+    ],
+    modal: {
+      title: "MLEO 蓄積の仕組み",
+      sections: [
+        { t: "1) 実際に得られるもの", p: "MLEO はプレイによって獲得するユーティリティトークンです。適格な結果が MLEO に変換されます。公平性と安定性のためレートは可変です。" },
+        { t: "2) 変換（概要）", p: "特定のアクションのみが対象。正確な式は公開されず、変更される場合があります。" },
+        { t: "3) 日次レンジと公平性", p: "個人の日次レンジに近づくほど蓄積は段階的に減速し、不正や過度な取得を防ぎます。" },
+        { t: "4) Vault と CLAIM", p: "残高はアプリ内 Vault に「CLAIM」できます。将来オンチェーン請求が開く場合、追加のアンロックや審査が適用される可能性があります。" },
+        { t: "5) 離席中", p: "限定的なオフライン進行が低効率で加算されます。" },
+        { t: "6) 重要事項", p: "可用性・レート・上限は変更/一時停止/リセットされることがあります。投資助言ではなく、価値は保証されません。" },
+      ],
+      cta: "今すぐ開始",
+      close: "閉じる",
+    },
+    footer: { terms: "利用規約", privacy: "プライバシー", docs: "ドキュメント" },
   },
 
   ko: {
-    brand: "MLEO",
-    heroTitleLine1: "채굴·합성·획득",
-    heroTitleLine2: "MLEO 러시에 오신 것을 환영합니다.",
-    newBadge: "신규",
-    earlyBadge: "초기 채굴자 환영",
-    startNow: "지금 시작",
-    howItWorksBtn: "작동 방식",
-    teaserNote:
-      "티저 — ‘지금 시작’을 누르면 전체 경험이 시작됩니다.",
-    bullets: ["공정한 일일 상한", "남용 방지 & 소프트 캡", "설치형 PWA"],
-    footerTerms: "이용약관",
-    footerPrivacy: "개인정보",
-    footerDocs: "문서",
-    footerCopy: (y) => `© ${y} MLEO. All rights reserved.`,
-    slogans: [
-      "비트코인을 첫날에 채굴하고 싶었나요? 오늘 MLEO로 시작하세요.",
-      "탭하고, 합치고, 획득하세요. 플레이를 MLEO로 전환하세요.",
-      "밈에서 머신으로 — 레오와 함께 미래를 채굴하세요.",
-      "공정한 발행. 진짜 경쟁. 순수한 재미.",
-      "가스 걱정 없음(데모). 채굴하고 랭크업!",
-      "초기 채굴자에 합류하고 MLEO 시대의 지분을 확보하세요.",
+    name: "한국어", dir: "ltr", code: "ko",
+    new: "신규", early: "초기 채굴자 환영",
+    heroH1_1: "채굴·합치기·획득",
+    heroH1_2: "MLEO 러시에 오신 것을 환영합니다.",
+    start: "지금 시작",
+    how: "작동 방식",
+    bullets: [
+      "공정하고 상한이 있는 일일 적립",
+      "남용 방지 및 소프트 제한",
+      "설치 가능한 PWA",
     ],
-    how: {
+    slogans: [
+      "비트코인을 첫날부터 캤다면? 지금 MLEO로 시작하세요.",
+      "탭하고, 합치고, 벌자. 플레이를 MLEO로 바꾸세요.",
+      "밈에서 머신으로 — 레오와 함께 미래를 채굴.",
+      "공정한 발행. 진짜 경쟁. 순수한 즐거움.",
+      "가스도 번거로움도 없음(데모). 그냥 캐고 성장하세요.",
+      "초기 채굴자에 합류하고 MLEO 시대의 몫을 가져가세요.",
+    ],
+    modal: {
       title: "MLEO 적립 방식",
-      close: "닫기",
-      s1t: "1) 실제로 얻는 것",
-      s1p:
-        "MLEO는 플레이를 통해 적립되는 유틸리티 토큰입니다. 진행하면서 게임 내 적격 결과의 일부가 MLEO로 변환될 수 있습니다. 변환은 가변적이며 공정성과 장기 안정성을 위해 설계되었고, 사전 고지 없이 변경될 수 있습니다.",
-      s2t: "2) 변환(개요)",
-      s2l: [
-        "특정 게임 이벤트만 적립 대상입니다.",
-        "내부 밸런싱 규칙을 사용하며, 정확한 수식이나 고정 비율은 공개하지 않습니다.",
-        "소프트 캡 등 보호 장치로 인해 개인 일일 범위에 가까워질수록 적립이 점차 줄어듭니다.",
-      ],
-      s3t: "3) 일일 범위와 공정성",
-      s3l: [
-        "계정마다 남용 방지와 공정성을 위한 내부 일일 범위가 있습니다.",
-        "해당 범위에 가까워질수록 그날의 신규 적립이 점차 완화됩니다.",
-        "생태계 건강을 위해 범위와 속도는 시간이 지나며 조정될 수 있습니다.",
-      ],
-      s4t: "4) Vault & Claim",
-      s4l: [
-        "적립된 MLEO는 잔액으로 표시되며, 게임 내 Vault로 CLAIM할 수 있습니다.",
-        "온체인 청구가 열릴 경우, 추가 잠금 해제 기간과 자격 확인이 적용될 수 있습니다.",
-        "그 전까지는 앱 내 엔터테인먼트 용도의 유틸리티 잔액입니다.",
-      ],
-      s5t: "5) 부재 중 활동",
-      s5l: [
-        "오프라인 상태에서도 효율이 낮은 제한적 진행이 발생할 수 있습니다.",
-        "행동은 동적으로 바뀔 수 있으며, 가벼운 보조일 뿐 플레이를 대체하지 않습니다.",
-      ],
-      s6t: "6) 중요 사항",
-      s6l: [
-        "가용성, 비율, 상한, 일정은 변경/일시중지/리셋될 수 있습니다.",
-        "버그/악용/비정상 활동 대응을 위해 잔액 조정이 이뤄질 수 있습니다.",
-        "투자 조언이 아닙니다. MLEO는 보장된 화폐 가치를 갖지 않습니다.",
+      sections: [
+        { t: "1) 실제로 얻는 것", p: "MLEO는 플레이를 통해 얻는 유틸리티 토큰입니다. 적격 결과가 MLEO로 전환될 수 있으며, 공정성과 안정성을 위해 비율은 가변적입니다." },
+        { t: "2) 전환(개요)", p: "특정 행동만 인정됩니다. 정확한 공식은 비공개이며 변경될 수 있습니다." },
+        { t: "3) 일일 범위와 공정성", p: "개인 일일 범위에 가까워질수록 적립은 점차 감소하여 남용을 방지합니다." },
+        { t: "4) 금고와 CLAIM", p: "잔액은 앱 내 금고로 CLAIM할 수 있습니다. 나중에 온체인 청구가 열릴 경우 추가 잠금 해제 창과 검증이 적용될 수 있습니다." },
+        { t: "5) 자리를 비웠을 때", p: "제한적인 오프라인 진행이 낮은 효율로 적립됩니다." },
+        { t: "6) 중요", p: "가용성, 비율, 상한은 변경/일시중지/리셋될 수 있습니다. 재정 조언이 아니며, MLEO의 가치가 보장되지는 않습니다." },
       ],
       cta: "지금 시작",
+      close: "닫기",
     },
+    footer: { terms: "이용약관", privacy: "개인정보", docs: "문서" },
+  },
+
+  tr: {
+    name: "Türkçe", dir: "ltr", code: "tr",
+    new: "Yeni", early: "Erken madencilere hoş geldiniz",
+    heroH1_1: "Kaz. Birleştir. Kazan.",
+    heroH1_2: "MLEO heyecanına hoş geldin.",
+    start: "HEMEN BAŞLA",
+    how: "Nasıl çalışır",
+    bullets: [
+      "Adil, limitli günlük birikim",
+      "Kötüye kullanıma karşı & yumuşak sınırlar",
+      "Yüklenebilir PWA",
+    ],
+    slogans: [
+      "Keşke ilk günden Bitcoin kazsaydım mı diyorsun? Bugün MLEO ile başla.",
+      "Dokun. Birleştir. Kazan. Oyunun MLEO’ya dönsün.",
+      "Memeden makineye — Leo ile geleceği kaz.",
+      "Adil ihraç. Gerçek rekabet. Saf eğlence.",
+      "Gas yok, dert yok (demo). Sadece kaz ve yüksel.",
+      "Erken madencilere katıl, MLEO çağındaki payını al.",
+    ],
+    modal: {
+      title: "MLEO birikimi nasıl işler",
+      sections: [
+        { t: "1) Gerçekte ne kazanırsın", p: "MLEO, oyunla kazanılan bir yardımcı tokendir. Uygun oyun sonuçları MLEO’ya dönüşebilir. Oranlar adalet ve istikrar için değişkendir." },
+        { t: "2) Dönüşüm (üst düzey)", p: "Yalnızca belirli eylemler sayılır. Tam formüller açık değildir ve değişebilir." },
+        { t: "3) Günlük aralık & adalet", p: "Kişisel günlük aralığına yaklaştıkça birikim kademe kademe azalır; suistimali önler." },
+        { t: "4) Kasa & CLAIM", p: "Bakiyeni uygulama içi Kasana CLAIM edebilirsin. Zincir üstü talep açılırsa ek kilit açma pencereleri ve uygunluk kontrolleri olabilir." },
+        { t: "5) Uzakken", p: "Sınırlı çevrimdışı ilerleme daha düşük verimle birikir." },
+        { t: "6) Önemli notlar", p: "Kullanılabilirlik, oranlar ve limitler değişebilir/durdu­rulabilir/sıfırlanabilir. Finansal tavsiye değildir; MLEO’nun değeri garanti edilmez." },
+      ],
+      cta: "HEMEN BAŞLA",
+      close: "Kapat",
+    },
+    footer: { terms: "Şartlar", privacy: "Gizlilik", docs: "Belgeler" },
+  },
+
+  it: {
+    name: "Italiano", dir: "ltr", code: "it",
+    new: "Nuovo", early: "Benvenuti i primi miner",
+    heroH1_1: "Minare. Unire. Guadagnare.",
+    heroH1_2: "Benvenuto nella corsa MLEO.",
+    start: "INIZIA ORA",
+    how: "Come funziona",
+    bullets: [
+      "Accrual giornaliero equo e con tetto",
+      "Anti-abuso e limiti graduali",
+      "PWA installabile",
+    ],
+    slogans: [
+      "Avresti voluto minare Bitcoin dal primo giorno? Inizia oggi con MLEO.",
+      "Tocca. Unisci. Guadagna. Trasforma il gioco in MLEO.",
+      "Dal meme alla macchina — estrai il futuro con Leo.",
+      "Emissione equa. Competizione reale. Divertimento puro.",
+      "Niente gas, niente stress (demo). Mina e sali.",
+      "Unisciti ai primi miner. Rivendica la tua parte dell’era MLEO.",
+    ],
+    modal: {
+      title: "Come si accumula MLEO",
+      sections: [
+        { t: "1) Cosa guadagni davvero", p: "MLEO è un token di utilità guadagnato giocando. Esiti idonei possono convertirsi in MLEO. Le percentuali sono variabili per equità e stabilità." },
+        { t: "2) Conversione (alto livello)", p: "Solo azioni specifiche contano. Le formule esatte non sono pubbliche e possono cambiare." },
+        { t: "3) Gamma giornaliera & equità", p: "L’accumulo si attenua man mano che ti avvicini alla tua gamma giornaliera personale, prevenendo abusi." },
+        { t: "4) Vault & CLAIM", p: "Puoi RICHIEDERE (CLAIM) il saldo nella tua Vault in-app. Se il claim on-chain aprirà, potranno esserci finestre di sblocco e controlli aggiuntivi." },
+        { t: "5) Quando sei assente", p: "Avanzamento offline limitato con efficienza ridotta." },
+        { t: "6) Note importanti", p: "Disponibilità, tassi e limiti possono cambiare/pausarsi/azzerarsi. Non è consulenza finanziaria; nessun valore garantito per MLEO." },
+      ],
+      cta: "INIZIA ORA",
+      close: "Chiudi",
+    },
+    footer: { terms: "Termini", privacy: "Privacy", docs: "Documenti" },
+  },
+
+  ka: {
+    name: "ქართული", dir: "ltr", code: "ka",
+    new: "ახალი", early: "მოგესალმებით ადრეული მაინერები",
+    heroH1_1: "მოპოვება. შერწყმა. მიღება.",
+    heroH1_2: "კეთილი იყოს თქვენი მობრძანება MLEO ბუმში.",
+    start: "დაიწყე ახლა",
+    how: "როგორ მუშაობს",
+    bullets: [
+      "სამართლიანი, შეზღუდული დღიური დაგროვება",
+      "ბოროტად გამოყენებისგან დაცვა & რბილი ლიმიტები",
+      "დასაყენებელი PWA",
+    ],
+    slogans: [
+      "სურდა პირველ დღესვე ბიტკოინის მაინინგი? დაიწყე ახლა MLEO-ით.",
+      "დააჭირე. გააერთიანე. მოიპოვე. თამაში გადააქციე MLEO-დ.",
+      "მიმიდან მანქანამდე — მოიპოვე მომავალი ლეოსთან.",
+      "სამართლიანი ემისია. ნამდვილი კონკურენცია. სუფთა გართობა.",
+      "გარეშე gas-ისა და სირთულეების (დემო). უბრალოდ მოპოვება და განვითარება.",
+      "შეუერთდი ადრეულ მაინერებს. მიიღო შენი წილი MLEO-ს ეპოქიდან.",
+    ],
+    modal: {
+      title: "როგორ გროვდება MLEO",
+      sections: [
+        { t: "1) რა რეალურად იღებ", p: "MLEO არის სასარგებლო ტოკენი, რომელიც გროვდება თამაშით. გარკვეული მოვლენები შეიძლება გადაიქცეს MLEO-დ. სიჩქარე ცვალებადია სამართლიანობისთვის." },
+        { t: "2) კონვერტაცია (ზედახედი)", p: "მხოლოდ გარკვეული ქმედებები ითვლება. ზუსტი ფორმულები საჯარო არაა და შეიძლება შეიცვალოს." },
+        { t: "3) დღიური დიაპაზონი & სამართლიანობა", p: "როცა უახლოვდები პირად დღიურ დიაპაზონს, დაგროვება ნელდება ბოროტად გამოყენების თავიდან ასაცილებლად." },
+        { t: "4) Vault და CLAIM", p: "შეგიძლია CLAIM ბალანსი აპის საცავში. თუ ოდესმე გაიხსნება ონჩეინ გამოყვანა, შეიძლება დაემატოს უშვიათ ფანჯრები და შემოწმებები." },
+        { t: "5) როცა ოფლაინ ხარ", p: "შეზღუდული პროგრესი გროვდება შემცირებული ეფექტიანობით." },
+        { t: "6) მნიშვნელოვანია", p: "ხელმისაწვდომობა, სიჩქრე და ლიმიტები შეიძლება შეიცვალოს/შეჩერდეს/გადატვირთოს. არა ფინანსური რჩევა; ღირებულება გარანტირებული არაა." },
+      ],
+      cta: "დაიწყე ახლა",
+      close: "დახურვა",
+    },
+    footer: { terms: "პირობები", privacy: "კონფიდენციალურობა", docs: "დოკუმენტები" },
+  },
+
+  pl: {
+    name: "Polski", dir: "ltr", code: "pl",
+    new: "Nowość", early: "Witamy wczesnych górników",
+    heroH1_1: "Kop. Łącz. Zarabiaj.",
+    heroH1_2: "Witamy w gorączce MLEO.",
+    start: "ZACZNIJ TERAZ",
+    how: "Jak to działa",
+    bullets: [
+      "Uczciwe, ograniczone dzienne naliczanie",
+      "Ochrona przed nadużyciami i miękkie limity",
+      "Instalowalne PWA",
+    ],
+    slogans: [
+      "Chciałbyś kopać Bitcoina od pierwszego dnia? Zacznij dziś z MLEO.",
+      "Klikaj. Łącz. Zarabiaj. Zamień grę w MLEO.",
+      "Od mema do maszyny — kop przyszłość z Leo.",
+      "Uczciwa emisja. Prawdziwa rywalizacja. Czysta zabawa.",
+      "Bez gasu i problemów (demo). Po prostu kop i awansuj.",
+      "Dołącz do wczesnych górników. Odbierz swój udział w erze MLEO.",
+    ],
+    modal: {
+      title: "Jak nalicza się MLEO",
+      sections: [
+        { t: "1) Co faktycznie zyskujesz", p: "MLEO to token użytkowy zdobywany w grze. Kwalifikowane wyniki mogą zamieniać się na MLEO. Stawki są zmienne dla uczciwości i stabilności." },
+        { t: "2) Konwersja (ogólnie)", p: "Liczą się tylko konkretne działania. Dokładne formuły nie są publiczne i mogą się zmieniać." },
+        { t: "3) Dzienne widełki i fair play", p: "Naliczanie stopniowo maleje, gdy zbliżasz się do własnego dziennego limitu, by zapobiec nadużyciom." },
+        { t: "4) Skarbiec i CLAIM", p: "Saldo można PRZENIEŚĆ (CLAIM) do skarbca w aplikacji. Jeśli kiedyś otworzą się wypłaty on-chain, mogą dojść okna odblokowań i weryfikacje." },
+        { t: "5) Gdy jesteś offline", p: "Ograniczony postęp offline nalicza się z mniejszą wydajnością." },
+        { t: "6) Ważne uwagi", p: "Dostępność, stawki i limity mogą ulec zmianie/wstrzymaniu/resetowi. To nie porada finansowa; MLEO nie ma gwarantowanej wartości." },
+      ],
+      cta: "ZACZNIJ TERAZ",
+      close: "Zamknij",
+    },
+    footer: { terms: "Zasady", privacy: "Prywatność", docs: "Dokumenty" },
+  },
+
+  ro: {
+    name: "Română", dir: "ltr", code: "ro",
+    new: "Nou", early: "Bine ați venit, mineri timpurii",
+    heroH1_1: "Minează. Unește. Câștigă.",
+    heroH1_2: "Bun venit la goana MLEO.",
+    start: "ÎNCEPE ACUM",
+    how: "Cum funcționează",
+    bullets: [
+      "Acumulare zilnică echitabilă și plafonată",
+      "Anti-abuz și limite graduale",
+      "PWA instalabil",
+    ],
+    slogans: [
+      "Ți-ai fi dorit să minezi Bitcoin din prima zi? Începe azi cu MLEO.",
+      "Atinge. Unește. Câștigă. Transformă jocul în MLEO.",
+      "De la meme la mașină — minează viitorul cu Leo.",
+      "Emisie echitabilă. Competiție reală. Distracție pură.",
+      "Fără gas, fără bătăi de cap (demo). Doar minează și evoluează.",
+      "Alătură-te minerilor timpurii. Reclamă-ți partea din era MLEO.",
+    ],
+    modal: {
+      title: "Cum se acumulează MLEO",
+      sections: [
+        { t: "1) Ce câștigi de fapt", p: "MLEO este un token utilitar câștigat prin joc. Rezultatele eligibile se pot converti în MLEO. Ratele sunt variabile pentru echitate și stabilitate." },
+        { t: "2) Conversie (nivel înalt)", p: "Numai anumite acțiuni se califică. Formulele exacte nu sunt publice și pot fi schimbate." },
+        { t: "3) Plajă zilnică & echitate", p: "Pe măsură ce te apropii de plaja ta zilnică, acumularea scade treptat pentru a preveni abuzurile." },
+        { t: "4) Vault & CLAIM", p: "Poți CREA (CLAIM) soldul în Vault-ul din aplicație. Dacă se deschide claim on-chain, pot exista ferestre de deblocare și verificări." },
+        { t: "5) Când ești plecat", p: "Progres offline limitat la o eficiență redusă." },
+        { t: "6) Note importante", p: "Disponibilitatea, ratele și plafoanele se pot schimba/opri/reseta. Nu este sfat financiar; valoarea MLEO nu este garantată." },
+      ],
+      cta: "ÎNCEPE ACUM",
+      close: "Închide",
+    },
+    footer: { terms: "Termeni", privacy: "Confidențialitate", docs: "Documentație" },
+  },
+
+  cs: {
+    name: "Čeština", dir: "ltr", code: "cs",
+    new: "Nové", early: "Vítejte, raní těžaři",
+    heroH1_1: "Těž. Spojuj. Vydělávej.",
+    heroH1_2: "Vítej v MLEO horečce.",
+    start: "ZAČÍT TEĎ",
+    how: "Jak to funguje",
+    bullets: [
+      "Fair, limitované denní připisování",
+      "Ochrana proti zneužití a měkké limity",
+      "Instalovatelná PWA",
+    ],
+    slogans: [
+      "Přáli byste si těžit Bitcoin hned první den? Začněte dnes s MLEO.",
+      "Klepni. Spoj. Vydělávej. Proměň hru v MLEO.",
+      "Od memu k stroji — těž budoucnost s Leem.",
+      "Spravedlivá emise. Skutečná konkurence. Čistá zábava.",
+      "Bez gasu, bez starostí (demo). Jen těž a postupuj.",
+      "Přidej se k raným těžařům. Získej svůj podíl éry MLEO.",
+    ],
+    modal: {
+      title: "Jak se připisuje MLEO",
+      sections: [
+        { t: "1) Co opravdu získáš", p: "MLEO je užitkový token získaný hraním. Vybrané výsledky se mohou převést na MLEO. Sazby jsou proměnlivé kvůli férovosti a stabilitě." },
+        { t: "2) Konverze (vysoká úroveň)", p: "Počítají se jen konkrétní akce. Přesné vzorce nejsou veřejné a mohou se měnit." },
+        { t: "3) Denní rozsah & férovost", p: "Jakmile se blížíš svému dennímu rozsahu, připisování se pozvolna snižuje, aby se zabránilo zneužití." },
+        { t: "4) Trezor & CLAIM", p: "Zůstatek lze CLAIMnout do trezoru v aplikaci. U on-chain claimu mohou později platit další okna a kontroly." },
+        { t: "5) Když nejsi u hry", p: "Omezený offline postup s nižší efektivitou." },
+        { t: "6) Důležité", p: "Dostupnost, sazby a limity se mohou měnit/pozastavit/resetovat. Nejedná se o finanční poradenství; MLEO nemá zaručenou hodnotu." },
+      ],
+      cta: "ZAČÍT TEĎ",
+      close: "Zavřít",
+    },
+    footer: { terms: "Podmínky", privacy: "Soukromí", docs: "Dokumentace" },
+  },
+
+  nl: {
+    name: "Nederlands", dir: "ltr", code: "nl",
+    new: "Nieuw", early: "Vroege miners welkom",
+    heroH1_1: "Minen. Mergen. Verdienen.",
+    heroH1_2: "Welkom bij de MLEO-rush.",
+    start: "NU STARTEN",
+    how: "Hoe het werkt",
+    bullets: [
+      "Eerlijke, begrensde dagelijkse opbouw",
+      "Anti-misbruik & zachte limieten",
+      "Installeerbare PWA",
+    ],
+    slogans: [
+      "Had je Bitcoin graag op dag één gemined? Begin vandaag met MLEO.",
+      "Tik. Merge. Verdien. Maak van je spel MLEO.",
+      "Van meme naar machine — mijn de toekomst met Leo.",
+      "Eerlijke emissie. Echte competitie. Pure fun.",
+      "Geen gas, geen gedoe (demo). Gewoon minen en stijgen.",
+      "Sluit je aan bij de early miners. Claim jouw deel van het MLEO-tijdperk.",
+    ],
+    modal: {
+      title: "Zo bouw je MLEO op",
+      sections: [
+        { t: "1) Wat je echt verdient", p: "MLEO is een utility-token dat je via spelen verdient. Geschikte resultaten kunnen worden omgezet in MLEO. Tarieven variëren voor eerlijkheid en stabiliteit." },
+        { t: "2) Conversie (hoog niveau)", p: "Alleen specifieke acties tellen mee. Exacte formules zijn niet openbaar en kunnen wijzigen." },
+        { t: "3) Dagelijkse bandbreedte & eerlijkheid", p: "Opbouw neemt geleidelijk af naarmate je je persoonlijke dagelijkse bereik nadert, om misbruik te voorkomen." },
+        { t: "4) Kluis & CLAIM", p: "Je saldo kun je CLAIMen naar je kluis in de app. Mocht on-chain claimen later openen, dan kunnen extra unlock-vensters en checks gelden." },
+        { t: "5) Als je weg bent", p: "Beperkte offline voortgang met lagere efficiëntie." },
+        { t: "6) Belangrijk", p: "Beschikbaarheid, tarieven en limieten kunnen wijzigen/pauseren/resetten. Geen financieel advies; MLEO heeft geen gegarandeerde waarde." },
+      ],
+      cta: "NU STARTEN",
+      close: "Sluiten",
+    },
+    footer: { terms: "Voorwaarden", privacy: "Privacy", docs: "Docs" },
+  },
+
+  el: {
+    name: "Ελληνικά", dir: "ltr", code: "el",
+    new: "Νέο", early: "Καλωσορίζουμε τους πρώτους miners",
+    heroH1_1: "Mining. Συνένωση. Κέρδος.",
+    heroH1_2: "Καλώς ήρθες στο MLEO Rush.",
+    start: "ΞΕΚΙΝΑ ΤΩΡΑ",
+    how: "Πώς λειτουργεί",
+    bullets: [
+      "Δίκαιη, με όριο ημερήσια συσσώρευση",
+      "Προστασία από κατάχρηση & ήπια όρια",
+      "Εγκαταστάσιμη PWA",
+    ],
+    slogans: [
+      "Θα ήθελες να έκανες mining Bitcoin από την πρώτη μέρα; Ξεκίνα σήμερα με το MLEO.",
+      "Πάτησε. Συνένωσε. Κέρδισε. Μετέτρεψε το παιχνίδι σου σε MLEO.",
+      "Από meme σε μηχανή — κάνε mining το μέλλον με τον Leo.",
+      "Δίκαιη έκδοση. Πραγματικός ανταγωνισμός. Καθαρή διασκέδαση.",
+      "Χωρίς gas, χωρίς μπέρδεμα (demo). Απλώς κάνε mining και ανέβα.",
+      "Μπες στους πρώτους miners. Διεκδίκησε το μερίδιό σου στην εποχή MLEO.",
+    ],
+    modal: {
+      title: "Πώς συσσωρεύεται το MLEO",
+      sections: [
+        { t: "1) Τι κερδίζεις πραγματικά", p: "Το MLEO είναι utility token που κερδίζεται μέσω παιχνιδιού. Κατάλληλα αποτελέσματα μπορεί να μετατραπούν σε MLEO. Τα ποσοστά είναι μεταβλητά για δικαιοσύνη και σταθερότητα." },
+        { t: "2) Μετατροπή (σε υψηλό επίπεδο)", p: "Μόνο συγκεκριμένες ενέργειες μετρούν. Οι ακριβείς φόρμουλες δεν είναι δημόσιες και μπορεί να αλλάξουν." },
+        { t: "3) Ημερήσιο εύρος & δικαιοσύνη", p: "Η συσσώρευση μειώνεται σταδιακά καθώς πλησιάζεις το προσωπικό σου ημερήσιο εύρος, για αποφυγή κατάχρησης." },
+        { t: "4) Θησαυροφυλάκιο & CLAIM", p: "Μπορείς να ΚΑΝΕΙΣ CLAIM το υπόλοιπο στο in-app θησαυροφυλάκιο. Αν ανοίξει on-chain claim, ενδέχεται να υπάρχουν επιπλέον παράθυρα και έλεγχοι." },
+        { t: "5) Όταν λείπεις", p: "Περιορισμένη offline πρόοδος με χαμηλότερη απόδοση." },
+        { t: "6) Σημαντικά", p: "Διαθεσιμότητα, ποσοστά και όρια μπορεί να αλλάξουν/παγώσουν/μηδενιστούν. Όχι οικονομική συμβουλή· δεν υπάρχει εγγυημένη αξία για το MLEO." },
+      ],
+      cta: "ΞΕΚΙΝΑ ΤΩΡΑ",
+      close: "Κλείσιμο",
+    },
+    footer: { terms: "Όροι", privacy: "Απόρρητο", docs: "Έγγραφα" },
   },
 };
 
-// Game entry (unchanged)
-const GAME_ENTRY_URL = "/play";
+// ===== Flags =====
+const FLAGS = {
+  en: "🇺🇸",
+ he: "🇮🇱",
+  ar: "🇸🇦",
+  ru: "🇷🇺",
+  es: "🇪🇸",
+  fr: "🇫🇷",
+  de: "🇩🇪",
+  zh: "🇨🇳",
+  ja: "🇯🇵",
+  ko: "🇰🇷",
+  tr: "🇹🇷",
+  it: "🇮🇹",
+  ka: "🇬🇪",
+  pl: "🇵🇱",
+  ro: "🇷🇴",
+  cs: "🇨🇿",
+  nl: "🇳🇱",
+  el: "🇬🇷",
+};
 
-// Infer initial locale from ?lang, localStorage, or navigator
-function getInitialLocale() {
+// ===== Helpers =====
+const ALL = Object.values(TEXT).map(x => ({ code: x.code, name: x.name }));
+const RTL_CODES = new Set(Object.values(TEXT).filter(x => x.dir === "rtl").map(x => x.code));
+
+function pickInitialLang() {
   try {
-    const qs = new URLSearchParams(window.location.search);
-    const q = (qs.get("lang") || "").toLowerCase();
-    if (q && T[q]) return q;
+    // 1) URL ?lang=
+    const q = new URLSearchParams(window.location.search);
+    const qLang = (q.get("lang") || "").toLowerCase();
+    if (qLang && TEXT[qLang]) return qLang;
+
+    // 2) localStorage
     const ls = localStorage.getItem("mleo_lang");
-    if (ls && T[ls]) return ls;
-    const nav = (navigator.language || "en").toLowerCase();
-    const short = nav.slice(0, 2);
-    if (T[short]) return short;
-  } catch {}
-  return "en";
+    if (ls && TEXT[ls]) return ls;
+
+    // 3) browser
+    const nav = (navigator.language || "en").slice(0,2).toLowerCase();
+    const guess = Object.keys(TEXT).find(k => k.startsWith(nav));
+    return guess || "en";
+  } catch { return "en"; }
 }
 
 export default function Home() {
-  const [locale, setLocale] = useState("en");
+  const [lang, setLang] = useState("en");
+  const [mounted, setMounted] = useState(false);
   const [idx, setIdx] = useState(0);
-  const [showHowItWorks, setShowHowItWorks] = useState(false);
-  const [mounted, setMounted] = useState(false); // for portals
+  const [showHow, setShowHow] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    const init = getInitialLocale();
-    setLocale(init);
-    try {
-      // set html attributes for RTL/LTR
-      document.documentElement.lang = init;
-      document.documentElement.dir = init === "he" ? "rtl" : "ltr";
-    } catch {}
+    const init = pickInitialLang();
+    setLang(init);
   }, []);
 
-  // rotate slogans
+  // Persist + set URL & dir
   useEffect(() => {
-    const id = setInterval(() => setIdx((i) => (i + 1) % (T[locale]?.slogans?.length || 1)), 2800);
-    return () => clearInterval(id);
-  }, [locale]);
-
-  // memoized dictionary
-  const t = useMemo(() => T[locale] || T.en, [locale]);
-
-  // switcher handler
-  const onLangChange = (e) => {
-    const v = e.target.value;
-    setLocale(v);
+    if (!mounted) return;
     try {
-      localStorage.setItem("mleo_lang", v);
-      document.documentElement.lang = v;
-      document.documentElement.dir = v === "he" ? "rtl" : "ltr";
+      localStorage.setItem("mleo_lang", lang);
       const url = new URL(window.location.href);
-      url.searchParams.set("lang", v);
+      url.searchParams.set("lang", lang);
       window.history.replaceState({}, "", url.toString());
+      document.documentElement.setAttribute("lang", lang);
+      document.documentElement.setAttribute("dir", RTL_CODES.has(lang) ? "rtl" : "ltr");
     } catch {}
-  };
+  }, [lang, mounted]);
+
+  useEffect(() => {
+    const id = setInterval(() => setIdx(i => (i + 1) % (TEXT[lang]?.slogans?.length || 1)), 2800);
+    return () => clearInterval(id);
+  }, [lang]);
+
+  const t = useMemo(() => TEXT[lang] || TEXT.en, [lang]);
+  const dir = t.dir || "ltr";
 
   return (
     <>
       <Head>
-        <title>MLEO — {t.heroTitleLine1}</title>
-        <meta
-          name="description"
-          content="MLEO is a playful crypto-mining experience. Focused, fair, and fun—designed for early miners."
-        />
+        <title>MLEO — Mine. Merge. Earn.</title>
+        <meta name="description" content="MLEO is a playful crypto-mining experience." />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#0b0b0d" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -476,57 +770,41 @@ export default function Home() {
       {/* BACKGROUND */}
       <main
         className="min-h-[var(--app-100vh,100vh)] relative overflow-hidden bg-[#0b0b0d] text-white"
+        dir={dir}
       >
         <div className="pointer-events-none absolute inset-0">
-          <div
-            className="absolute -top-1/3 -left-1/4 w-[70vw] h-[70vw] rounded-full blur-3xl opacity-30"
-            style={{
-              background:
-                "radial-gradient(50% 50% at 50% 50%, #a855f7 0%, rgba(168,85,247,0) 70%)",
-            }}
-          />
-          <div
-            className="absolute -bottom-1/3 -right-1/4 w-[70vw] h-[70vw] rounded-full blur-3xl opacity-30"
-            style={{
-              background:
-                "radial-gradient(50% 50% at 50% 50%, #f59e0b 0%, rgba(245,158,11,0) 70%)",
-            }}
-          />
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                "radial-gradient(1000px 600px at 50% -200px, rgba(250,204,21,.08), transparent)",
-            }}
-          />
+          <div className="absolute -top-1/3 -left-1/4 w-[70vw] h-[70vw] rounded-full blur-3xl opacity-30"
+               style={{ background: "radial-gradient(50% 50% at 50% 50%, #a855f7 0%, rgba(168,85,247,0) 70%)" }} />
+          <div className="absolute -bottom-1/3 -right-1/4 w-[70vw] h-[70vw] rounded-full blur-3xl opacity-30"
+               style={{ background: "radial-gradient(50% 50% at 50% 50%, #f59e0b 0%, rgba(245,158,11,0) 70%)" }} />
+          <div className="absolute inset-0"
+               style={{ background: "radial-gradient(1000px 600px at 50% -200px, rgba(250,204,21,.08), transparent)" }} />
         </div>
 
         {/* NAV */}
-        <header className="relative z-10 max-w-6xl mx-auto px-5 pt-6 flex items-center justify-between gap-3">
+        <header className="relative z-10 max-w-6xl mx-auto px-5 pt-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img
-              src="/images/leo-coin-gold.png"
-              alt="MLEO"
-              className="w-10 h-10 rounded-full object-contain"
-            />
-            <span className="text-xl font-bold tracking-wide">{t.brand}</span>
+            <img src="/images/leo-coin-gold.png" alt="MLEO" className="w-10 h-10 rounded-full object-contain" />
+            <span className="text-xl font-bold tracking-wide">MLEO</span>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Language selector */}
-            <select
-              className="px-3 py-2 rounded-xl bg-white/10 border border-white/15 text-sm"
-              value={locale}
-              onChange={onLangChange}
-              aria-label="Language"
-              title="Language"
-            >
-              {Object.entries(SUPPORTED).map(([k, label]) => (
-                <option key={k} value={k}>
-                  {label}
-                </option>
-              ))}
-            </select>
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Language select */}
+           <select
+  value={lang}
+  onChange={e => setLang(e.target.value)}
+  className="px-3 py-2 rounded-xl bg-white/10 border border-white/20 hover:bg-white/15 transition text-sm"
+  aria-label="Language"
+  dir="ltr"
+  style={{ fontFamily: "system-ui, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol" }}
+>
+  {ALL.map(opt => (
+    <option key={opt.code} value={opt.code}>
+      {(FLAGS[opt.code] ? FLAGS[opt.code] + " " : "") + TEXT[opt.code].name}
+    </option>
+  ))}
+</select>
+
 
             <PWAInstall />
 
@@ -534,7 +812,7 @@ export default function Home() {
               href={GAME_ENTRY_URL}
               className="hidden sm:inline-flex px-4 py-2 rounded-xl bg-yellow-400 text-black font-bold hover:bg-yellow-300 transition"
             >
-              {t.startNow}
+              {t.start}
             </Link>
           </div>
         </header>
@@ -543,58 +821,53 @@ export default function Home() {
         <section className="relative z-10 max-w-6xl mx-auto px-5 pt-10 pb-20 sm:pt-16 sm:pb-28 grid md:grid-cols-2 gap-10 items-center">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/10 text-xs mb-5">
-              <span>{t.newBadge}</span>
-              <span className="opacity-60">{t.earlyBadge}</span>
+              <span>{t.new}</span><span className="opacity-60">{t.early}</span>
             </div>
+
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight">
-              {t.heroTitleLine1}
-              <br />
-              <span className="text-yellow-400">{t.heroTitleLine2}</span>
+              {t.heroH1_1}<br /><span className="text-yellow-400">{t.heroH1_2}</span>
             </h1>
+
             <p className="mt-5 text-base sm:text-lg text-white/80 max-w-xl">
-              {(t.slogans || T.en.slogans)[idx]}
+              {(t.slogans && t.slogans[idx]) || ""}
             </p>
 
-            <div className="mt-8 flex flex-col sm:flex-row gap-3">
+            <div className={`mt-8 flex ${dir==='rtl' ? 'flex-col sm:flex-row-reverse' : 'flex-col sm:flex-row'} gap-3`}>
               <Link
                 href={GAME_ENTRY_URL}
                 className="px-6 py-3 rounded-2xl bg-yellow-400 text-black font-extrabold text-lg shadow hover:bg-yellow-300 transition"
               >
-                {t.startNow}
+                {t.start}
               </Link>
 
               <button
-                onClick={() => setShowHowItWorks(true)}
+                onClick={() => setShowHow(true)}
                 className="px-6 py-3 rounded-2xl border border-white/20 font-semibold hover:bg-white/5 transition text-center"
               >
-                {t.howItWorksBtn}
+                {t.how}
               </button>
             </div>
 
-            {/* Trust bullets */}
             <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm text-white/70">
-              {(t.bullets || T.en.bullets).map((b, i) => (
-                <div key={i} className="p-3 rounded-xl bg-white/5 border border-white/10">
-                  {b}
-                </div>
+              {t.bullets.map((b, i) => (
+                <div key={i} className="p-3 rounded-xl bg-white/5 border border-white/10">{b}</div>
               ))}
             </div>
           </div>
 
-          {/* VIDEO – teaser */}
+          {/* VIDEO */}
           <div className="relative">
             <div className="absolute -inset-6 rounded-[32px] bg-yellow-400/10 blur-3xl" />
             <div className="relative rounded-3xl border border-white/10 bg-white/5 p-4 shadow-xl backdrop-blur">
               <video
-                autoPlay
-                loop
-                muted
-                playsInline
+                autoPlay loop muted playsInline
                 poster="/images/mleo-hero-preview.png"
                 className="w-full h-auto rounded-2xl object-cover"
                 src="/videos/intro.mp4"
               />
-              <p className="mt-3 text-xs text-white/60 text-center">{t.teaserNote}</p>
+              <p className="mt-3 text-xs text-white/60 text-center">
+                Teaser — the full experience starts when you hit {t.start}.
+              </p>
             </div>
           </div>
         </section>
@@ -602,115 +875,65 @@ export default function Home() {
         {/* FOOTER */}
         <footer className="relative z-10 max-w-6xl mx-auto px-5 pb-10 text-xs text-white/50">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 justify-between">
-            <div>{t.footerCopy(new Date().getFullYear())}</div>
+            <div>© {new Date().getFullYear()} MLEO. All rights reserved.</div>
             <div className="space-x-4">
-              <a href="#" className="hover:text-white/80">
-                {t.footerTerms}
-              </a>
-              <a href="#" className="hover:text-white/80">
-                {t.footerPrivacy}
-              </a>
-              <a href="#" className="hover:text-white/80">
-                {t.footerDocs}
-              </a>
+              <a href="#" className="hover:text-white/80">{t.footer.terms}</a>
+              <a href="#" className="hover:text-white/80">{t.footer.privacy}</a>
+              <a href="#" className="hover:text-white/80">{t.footer.docs}</a>
             </div>
           </div>
         </footer>
       </main>
 
-      {/* HOW IT WORKS Modal via Portal */}
-      {showHowItWorks &&
-        mounted &&
-        createPortal(
-          <div
-            className="fixed inset-0 bg-black/70 backdrop-blur"
-            style={{
-              zIndex: 10050,
-              paddingTop: "calc(env(safe-area-inset-top, 0px) + 6vh)",
-              paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 2vh)",
-            }}
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="mx-auto max-w-2xl w-[92%] max-h-[88vh] overflow-auto bg-neutral-900 text-white rounded-2xl border border-white/10 shadow-2xl relative">
-              {/* Sticky header */}
-              <div className="sticky top-0 z-10 bg-neutral-900/95 backdrop-blur p-4 border-b border-white/10 rounded-t-2xl flex items-center justify-between">
-                <h2 className="text-2xl font-bold">{t.how.title}</h2>
-                <button
-                  onClick={() => setShowHowItWorks(false)}
-                  className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20"
-                  aria-label={t.how.close}
-                  title={t.how.close}
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className="p-6 space-y-4 text-sm text-white/80">
-                <section>
-                  <h3 className="font-semibold text-white mb-1">{t.how.s1t}</h3>
-                  <p>{t.how.s1p}</p>
-                </section>
-
-                <section>
-                  <h3 className="font-semibold text-white mb-1">{t.how.s2t}</h3>
-                  <ul className="list-disc ml-5 space-y-1">
-                    {t.how.s2l.map((x, i) => (
-                      <li key={i}>{x}</li>
-                    ))}
-                  </ul>
-                </section>
-
-                <section>
-                  <h3 className="font-semibold text-white mb-1">{t.how.s3t}</h3>
-                  <ul className="list-disc ml-5 space-y-1">
-                    {t.how.s3l.map((x, i) => (
-                      <li key={i}>{x}</li>
-                    ))}
-                  </ul>
-                </section>
-
-                <section>
-                  <h3 className="font-semibold text-white mb-1">{t.how.s4t}</h3>
-                  <ul className="list-disc ml-5 space-y-1">
-                    {t.how.s4l.map((x, i) => (
-                      <li key={i}>{x}</li>
-                    ))}
-                  </ul>
-                </section>
-
-                <section>
-                  <h3 className="font-semibold text-white mb-1">{t.how.s5t}</h3>
-                  <ul className="list-disc ml-5 space-y-1">
-                    {t.how.s5l.map((x, i) => (
-                      <li key={i}>{x}</li>
-                    ))}
-                  </ul>
-                </section>
-
-                <section>
-                  <h3 className="font-semibold text-white mb-1">{t.how.s6t}</h3>
-                  <ul className="list-disc ml-5 space-y-1">
-                    {t.how.s6l.map((x, i) => (
-                      <li key={i}>{x}</li>
-                    ))}
-                  </ul>
-                </section>
-              </div>
-
-              <div className="px-6 pb-6 flex justify-end">
-                <Link
-                  href={GAME_ENTRY_URL}
-                  className="px-5 py-2 rounded-xl bg-yellow-400 text-black font-extrabold hover:bg-yellow-300 transition"
-                  onClick={() => setShowHowItWorks(false)}
-                >
-                  {t.how.cta}
-                </Link>
-              </div>
+      {/* HOW IT WORKS modal via Portal */}
+      {showHow && mounted && createPortal(
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur"
+          style={{
+            zIndex: 10050,
+            paddingTop: "calc(env(safe-area-inset-top, 0px) + 6vh)",
+            paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 2vh)",
+          }}
+          role="dialog"
+          aria-modal="true"
+          dir={dir}
+        >
+          <div className="mx-auto max-w-2xl w-[92%] max-h-[88vh] overflow-auto bg-neutral-900 text-white rounded-2xl border border-white/10 shadow-2xl relative">
+            {/* Sticky header */}
+            <div className="sticky top-0 z-10 bg-neutral-900/95 backdrop-blur p-4 border-b border-white/10 rounded-t-2xl flex items-center justify-between">
+              <h2 className="text-2xl font-bold">{t.modal.title}</h2>
+              <button
+                onClick={() => setShowHow(false)}
+                className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20"
+                aria-label="Close"
+                title={t.modal.close}
+              >
+                ✕
+              </button>
             </div>
-          </div>,
-          document.body
-        )}
+
+            <div className="p-6 space-y-4 text-sm text-white/80">
+              {t.modal.sections.map((sec, i) => (
+                <section key={i}>
+                  <h3 className="font-semibold text-white mb-1">{sec.t}</h3>
+                  <p>{sec.p}</p>
+                </section>
+              ))}
+            </div>
+
+            <div className={`px-6 pb-6 flex ${dir==='rtl' ? 'justify-start' : 'justify-end'}`}>
+              <Link
+                href={GAME_ENTRY_URL}
+                className="px-5 py-2 rounded-xl bg-yellow-400 text-black font-extrabold hover:bg-yellow-300 transition"
+                onClick={() => setShowHow(false)}
+              >
+                {t.modal.cta}
+              </Link>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </>
   );
 }
