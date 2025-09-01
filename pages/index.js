@@ -280,6 +280,43 @@ he: {
     footer: { terms: "Bedingungen", privacy: "Datenschutz", docs: "Doku" },
   },
 
+pt: {
+  name: "Português", dir: "ltr", code: "pt",
+  new: "Novo", early: "Bem-vindos, mineradores iniciais",
+  heroH1_1: "Minerar. Mesclar. Ganhar.",
+  heroH1_2: "Bem-vindo à corrida MLEO.",
+  start: "COMEÇAR AGORA",
+  how: "Como funciona",
+  bullets: [
+    "Acúmulo diário justo e com teto",
+    "Antiabuso e limites suaves",
+    "PWA instalável",
+  ],
+  slogans: [
+    "Queria ter minerado Bitcoin no primeiro dia? Comece com o MLEO hoje.",
+    "Toque. Una. Ganhe. Transforme seu jogo em MLEO.",
+    "Do meme à máquina — mine o futuro com o Leo.",
+    "Emissão justa. Competição real. Diversão pura.",
+    "Sem gas e sem complicação (demo). É só minerar e subir.",
+    "Junte-se aos primeiros mineradores. Garanta sua parte na era MLEO.",
+  ],
+  modal: {
+    title: "Como o MLEO é acumulado",
+    sections: [
+      { t: "1) O que você realmente ganha", p: "MLEO é um token utilitário obtido jogando. Resultados elegíveis no jogo podem se converter em MLEO. As taxas são variáveis para garantir justiça e estabilidade." },
+      { t: "2) Conversão (visão geral)", p: "Apenas ações específicas contam. As fórmulas exatas não são públicas e podem mudar." },
+      { t: "3) Faixa diária e justiça", p: "O acúmulo diminui gradualmente à medida que você se aproxima da sua faixa diária pessoal, para evitar abuso e manter um ritmo saudável." },
+      { t: "4) Cofre e CLAIM", p: "Seu saldo acumulado pode ser CLAIMado para o Cofre do app. Se o claim on-chain abrir no futuro, janelas e verificações adicionais podem se aplicar." },
+      { t: "5) Quando você está ausente", p: "Progresso offline limitado pode acumular com eficiência reduzida." },
+      { t: "6) Observações importantes", p: "Disponibilidade, taxas e tetos podem mudar/pausar/reiniciar. Não é conselho financeiro; o MLEO não tem valor garantido." },
+    ],
+    cta: "COMEÇAR AGORA",
+    close: "Fechar",
+  },
+  footer: { terms: "Termos", privacy: "Privacidade", docs: "Documentação" },
+},
+
+
   zh: {
     name: "中文", dir: "ltr", code: "zh",
     new: "新", early: "欢迎早期矿工",
@@ -686,6 +723,7 @@ const FLAGS = {
   es: "🇪🇸",
   fr: "🇫🇷",
   de: "🇩🇪",
+   pt: "br",
   zh: "🇨🇳",
   ja: "🇯🇵",
   ko: "🇰🇷",
