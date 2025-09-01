@@ -1,132 +1,100 @@
 // pages/index.js
-import { useEffect, useRef, useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
-import Layout from "../components/Layout";
-import { useAccount } from "wagmi";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useEffect, useRef, useState } from "react";
 
 export default function Home() {
   const [introDone, setIntroDone] = useState(false);
   const videoRef = useRef(null);
-  const { isConnected } = useAccount();
 
-  // אם אין וידאו/שגיאה – מסיימים Splash אחרי ~3.2 שניות
+  // אם אין וידאו / יש שגיאה – נסגור את הספלש אחרי ~2.6 שניות
   useEffect(() => {
-    const t = setTimeout(() => setIntroDone(true), 3200);
+    if (introDone) return;
+    const t = setTimeout(() => setIntroDone(true), 2600);
     return () => clearTimeout(t);
-  }, []);
+  }, [introDone]);
 
   const finishIntro = () => setIntroDone(true);
 
   return (
-    <Layout>
+    <>
       <Head>
         <title>MLEO Miners</title>
-        <meta name="description" content="Merge miners • Break rocks • Earn coins" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
       </Head>
 
-      {/* ===== SPLASH (וידאו פתיחה אם קיים; אחרת אנימציה) ===== */}
+      {/* ===== SPLASH (וידאו אם קיים, אחרת אנימציה) ===== */}
       {!introDone && (
         <div className="fixed inset-0 z-[100] overflow-hidden mleo-splash-bg">
-          {/* שים קובץ ב: /public/videos/intro.mp4 (אופציונלי) */}
           <video
             ref={videoRef}
             className="absolute inset-0 w-full h-full object-cover opacity-90"
-            src="/videos/intro.mp4"
+            src="/videos/intro.mp4" // אופציונלי; אם לא קיים נקבל אנימציה בלבד
             autoPlay
             muted
             playsInline
             onEnded={finishIntro}
-            onError={() => {/* נשארים על הרקע האנימטיבי עד הטיימאאוט */}}
+            onError={() => { /* נשארים עד הטיימר ב-useEffect */ }}
           />
-          {/* שכבת לוגו/טקסט מעל הווידאו או לבד אם אין קובץ */}
           <div className="absolute inset-0 grid place-items-center">
             <div className="text-center">
-              <div className="mx-auto mb-6 h-24 w-24 rounded-3xl bg-yellow-400/90 shadow-2xl ring-8 ring-yellow-300/30 animate-mleo-pop">
-                {/* אופציונלי: /public/images/logo.png */}
-                <img
-                  src="/images/logo.png"
-                  alt="MLEO"
-                  className="w-full h-full object-contain p-3 drop-shadow-xl"
-                  onError={(e)=>{ e.currentTarget.style.display='none'; }}
-                />
+              <div className="mx-auto mb-6 h-24 w-24 rounded-3xl bg-yellow-400 ring-4 ring-yellow-300/30 animate-mleo-pop" />
+              <div className="text-white/90 font-black tracking-tight text-2xl animate-mleo-fadeUp">
+                Loading MLEO…
               </div>
-              <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white animate-mleo-fadeUp">
-                MLEO Miners
-              </h1>
-              <p className="mt-2 text-sm sm:text-base text-white/80 animate-mleo-fadeUp [animation-delay:.12s]">
-                Merge miners • Break rocks • Earn coins
-              </p>
+              <div className="mt-4 w-40 h-1.5 bg-white/15 rounded-full overflow-hidden mx-auto">
+                <div className="h-full w-1/3 bg-yellow-400 animate-mleo-loader" />
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ===== HERO ===== */}
-      <div className="relative min-h-[calc(var(--app-100vh,100svh)-0px)] grid place-items-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 overflow-hidden">
-        {/* דקורציות רקע קלות */}
-        <div className="pointer-events-none absolute -top-24 -left-24 w-[36rem] h-[36rem] rounded-full blur-3xl opacity-25 bg-yellow-500/20" />
-        <div className="pointer-events-none absolute -bottom-24 -right-24 w-[36rem] h-[36rem] rounded-full blur-3xl opacity-20 bg-cyan-500/20" />
+      {/* ===== MAIN ===== */}
+      <main className="min-h-[100svh] bg-gray-950 text-white relative overflow-hidden">
+        {/* רקע דקורטיבי */}
+        <div className="pointer-events-none absolute -top-40 -left-20 w-[36rem] h-[36rem] rounded-full blur-3xl opacity-20"
+             style={{ background: "radial-gradient(circle, #fde047 0%, transparent 60%)" }} />
+        <div className="pointer-events-none absolute -bottom-40 -right-20 w-[36rem] h-[36rem] rounded-full blur-3xl opacity-15"
+             style={{ background: "radial-gradient(circle, #38bdf8 0%, transparent 60%)" }} />
 
-        <main className="relative z-10 max-w-4xl w-full px-4 text-center">
-          <h1 className="text-4xl sm:text-6xl font-black text-white drop-shadow-xl animate-mleo-fadeUp">
-           ⛏️ MLEO Miners
+        {/* Header קטן */}
+        <header className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src="/images/logo.png" alt="" className="w-9 h-9 rounded-lg bg-white/10 object-cover" />
+            <span className="font-extrabold tracking-tight">MLEO</span>
+          </div>
+          <nav className="flex items-center gap-4 text-sm">
+            <Link href="/play" className="text-white/80 hover:text-white">Play</Link>
+            <a href="https://twitter.com" target="_blank" rel="noreferrer" className="text-white/60 hover:text-white">Twitter</a>
+          </nav>
+        </header>
+
+        {/* HERO */}
+        <section className="max-w-6xl mx-auto px-4 pt-10 pb-16 text-center">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight">
+            ⛏️ MLEO Miners
           </h1>
-          <p className="mt-3 text-white/80 animate-mleo-fadeUp [animation-delay:.08s]">
-            משחק Merge casual. חוצבים סלעים, ממזגים כורים, וצוברים Coins. חלק מה-Coins עשוי להמיר ל-MLEO לפי כללים פנימיים.
+          <p className="mt-3 text-white/80 max-w-2xl mx-auto">
+            Merge dogs, break rocks, earn coins — and accrue MLEO in demo mode.
           </p>
 
-          <div className="mt-8 flex flex-wrap gap-3 justify-center animate-mleo-fadeUp [animation-delay:.15s]">
-            {/* התחבר לארנק (RainbowKit) */}
-            <ConnectButton showBalance={false} />
-
-            {/* מעבר למשחק (ללא מסך פתיחה פנימי) */}
+          <div className="mt-7 flex items-center justify-center gap-3 flex-wrap">
             <Link
-              href="/mleo-miners"
-              className="px-5 py-3 rounded-xl font-extrabold bg-yellow-400 hover:bg-yellow-300 text-black shadow-lg ring-2 ring-yellow-300 active:scale-95 transition"
+              href="/play"
+              className="px-5 py-3 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black font-extrabold shadow-lg active:scale-95 transition"
             >
-              START MINING
-            </Link>
-
-            {/* מידע: How To / Mining / Terms – אותם תכנים שהיו במסך הפתיחה של המשחק */}
-            <Link
-              href="/mleo-miners#howto"
-              className="px-4 py-3 rounded-xl font-extrabold bg-emerald-400 hover:bg-emerald-300 text-black shadow ring-2 ring-emerald-300 active:scale-95 transition"
-            >
-              HOW TO PLAY
+              PLAY NOW
             </Link>
             <Link
-              href="/mleo-miners#mining"
-              className="px-4 py-3 rounded-xl font-extrabold bg-cyan-400 hover:bg-cyan-300 text-black shadow ring-2 ring-cyan-300 active:scale-95 transition"
+              href="/play"
+              className="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white/90 font-extrabold active:scale-95 transition"
             >
-              MINING
-            </Link>
-            <Link
-              href="/mleo-miners#terms"
-              className="px-4 py-3 rounded-xl font-extrabold bg-teal-400 hover:bg-teal-300 text-black shadow ring-2 ring-teal-300 active:scale-95 transition"
-            >
-              TERMS
+              HOW IT WORKS
             </Link>
           </div>
-
-          {/* שורת פיצ'רים */}
-          <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
-            <div className="rounded-2xl bg-white/5 p-4 backdrop-blur-sm border border-white/10 text-white">
-              <div className="text-lg font-extrabold">Merge & Upgrade</div>
-              <div className="text-white/80 text-sm">מיזוג כורים ושדרוגים מספריים פשוטים, כיף ומהיר.</div>
-            </div>
-            <div className="rounded-2xl bg-white/5 p-4 backdrop-blur-sm border border-white/10 text-white">
-              <div className="text-lg font-extrabold">Break Rocks</div>
-              <div className="text-white/80 text-sm">HP של סלעים גדל בהדרגה; DPS גדל עם הרמות.</div>
-            </div>
-            <div className="rounded-2xl bg-white/5 p-4 backdrop-blur-sm border border-white/10 text-white">
-              <div className="text-lg font-extrabold">MLEO Balance</div>
-              <div className="text-white/80 text-sm">חלק מה-Coins עשוי להפוך ל-MLEO לפי מגבלות יומיות ואיזון.</div>
-            </div>
-          </div>
-        </main>
-      </div>
-    </Layout>
+        </section>
+      </main>
+    </>
   );
 }
