@@ -35,7 +35,8 @@ export default function Home() {
           name="description"
           content="MLEO is a playful crypto-mining experience. Focused, fair, and fun—designed for early miners."
         />
-        <link rel="manifest" href="/manifest.webmanifest" />
+        <link rel="manifest" href="/manifest.json" />
+
         <meta name="theme-color" content="#0b0b0d" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
