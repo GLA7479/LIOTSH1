@@ -148,6 +148,15 @@ function getPhaseInfo(s, now = Date.now()) {
   };
 }
 
+// Vault display – ספרה אחת אחרי הנקודה בלבד
+function formatMleoVault(n) {
+  const num = Number(n || 0);
+  const sign = num < 0 ? "-" : "";
+  const abs = Math.abs(num);
+  return sign + abs.toFixed(1);
+}
+
+
 function currentGiftIntervalSec(s, now = Date.now()) {
   const ph = phaseAtGlobal(now);
   if (s) s.lastGiftIntervalSec = ph.intervalSec; // לשמירה לשכבת ה־HUD בלבד
@@ -195,43 +204,52 @@ function suffixFromTier(tier) {
   return s;
 }
 
-// קיצור מספרים כלליים (Coins, מחירים, עלויות וכו') — תמיד שלם, בלי נקודה עשרונית
+// קיצור מספרים כללי עם 2 ספרות אחרי הנקודה (חיתוך, לא עיגול)
 function formatAbbrevInt(n) {
   const sign = (n || 0) < 0 ? "-" : "";
-  const abs = Math.abs(Number(n) || 0);
+  const abs  = Math.abs(Number(n) || 0);
+  const p = 100; // 2 ספרות
 
-  if (abs < 1000) return sign + String(Math.round(abs));
+  if (abs < 1000) {
+    const t = Math.trunc(abs * p) / p;
+    return sign + t.toFixed(2);
+  }
 
-  let tier = Math.floor(Math.log10(abs) / 3);        // אלפים=1, מיליונים=2...
-  let div = Math.pow(1000, tier);
-  let val = Math.round(abs / div);
+  let tier = Math.floor(Math.log10(abs) / 3); // 1=K, 2=M...
+  let div  = Math.pow(1000, tier);
+  let val  = abs / div;
 
-  // Normalize: 999.5K → 1M
-  if (val >= 1000) { tier += 1; val = 1; }
+  // חיתוך ל-2 ספרות
+  let trimmed = Math.trunc(val * p) / p;
 
-  return sign + String(val) + suffixFromTier(tier);
+  // נרמול קצה: 1000.00 → קפיצה לדרגה הבאה
+  if (trimmed >= 1000) {
+    tier += 1;
+    trimmed = 1;
+  }
+
+  return sign + trimmed.toFixed(2) + suffixFromTier(tier);
 }
+
 
 // שמירה על השם הקיים בקוד
 const formatShort = formatAbbrevInt;
 
-// MLEO: ספרה עשרונית אחת רק עד 999.9; מעל 1000 → קיצור בלי עשרוניות
+// MLEO — 3 ספרות אחרי הנקודה בכל טווח (בלי קיצור), חיתוך לא עיגול
 function formatMleo(n) {
-  const sign = (n || 0) < 0 ? "-" : "";
-  const abs = Math.abs(Number(n) || 0);
-
-  if (abs < 1000) {
-    // תמיד ספרה אחת אחרי הנקודה (כולל ".0")
-    return sign + (abs).toFixed(1);
-  }
-
-  let tier = Math.floor(Math.log10(abs) / 3);
-  let div = Math.pow(1000, tier);
-  let val = Math.round(abs / div);
-  if (val >= 1000) { tier += 1; val = 1; }
-
-  return sign + String(val) + suffixFromTier(tier);
+  const num = Number(n || 0);
+  const sign = num < 0 ? "-" : "";
+  const abs = Math.abs(num);
+  const p = 1000; // 3 ספרות
+  const t = Math.trunc(abs * p) / p;
+  return sign + t.toFixed(3);
 }
+
+// MLEO קצר — קיצור עם 2 ספרות (ל-HUD/טוסטים/פופאפים)
+function formatMleoShort(n) {
+  return formatAbbrevInt(n);
+}
+
 
 
 // ===== Simple image cache =====
@@ -266,7 +284,8 @@ const CLAIM_SCHEDULE = [
 ];
 
 // —— Conversion & daily limit (editable) ——
-const MLEO_FROM_COINS_PCT = 0.10;
+const MLEO_FROM_COINS_PCT = 0.01; // 1% from coins -> MLEO
+
 
 const SOFTCUT = [
   { upto: 0.80, factor: 1.00 },
@@ -553,7 +572,8 @@ export default function MleoMiners() {
 
     saveMiningState(st);
     setMining(st);
-    setGiftToastWithTTL(`Moved ${formatMleo(amt)} MLEO to Vault`);
+    setGiftToastWithTTL(`Moved ${formatMleoShort(amt)} MLEO to Vault`);
+
 
   }
 
@@ -645,47 +665,50 @@ export default function MleoMiners() {
   }
 
   function grantGift(){
-    const s = stateRef.current; if (!s) return;
-    const type = rollGiftType(); // updated weights (no dog in regular gifts)
+  const s = stateRef.current; if (!s) return;
+  const type = rollGiftType(); // updated weights (no dog in regular gifts)
 
-    if (type === "coins20") {
-      const base = Math.max(10, expectedGiftCoinReward(s));
-      const gain = Math.round(base * 0.20);
-      s.gold += gain;
-      setUi(u => ({ ...u, gold: s.gold }));
-      setCenterPopup({ text: `🎁 +${formatShort(gain)} coins (20%)`, id: Math.random() });
+  if (type === "coins20") {
+    const base = Math.max(10, expectedGiftCoinReward(s));
+    const gain = Math.round(base * 0.20);
+    s.gold += gain;
+    setUi(u => ({ ...u, gold: s.gold }));
+    // בלי הצגת אחוזים
+    setCenterPopup({ text: `🎁 +${formatShort(gain)} coins`, id: Math.random() });
 
-    } else if (type === "coins40") {
-      const base = Math.max(10, expectedGiftCoinReward(s));
-      const gain = Math.round(base * 0.40);
-      s.gold += gain;
-      setUi(u => ({ ...u, gold: s.gold }));
-      setCenterPopup({ text: `🎁 +${formatShort(gain)} coins (40%)`, id: Math.random() });
+  } else if (type === "coins40") {
+    const base = Math.max(10, expectedGiftCoinReward(s));
+    const gain = Math.round(base * 0.40);
+    s.gold += gain;
+    setUi(u => ({ ...u, gold: s.gold }));
+    // בלי הצגת אחוזים
+    setCenterPopup({ text: `🎁 +${formatShort(gain)} coins`, id: Math.random() });
 
-    } else if (type === "dps") {
-      s.dpsMult = +((s.dpsMult || 1) * 1.1).toFixed(2);
-      setCenterPopup({ text: `🎁 DPS +10% (×${(s.dpsMult||1).toFixed(2)})`, id: Math.random() });
+  } else if (type === "dps") {
+    s.dpsMult = +((s.dpsMult || 1) * 1.1).toFixed(2);
+    setCenterPopup({ text: `🎁 DPS +10% (×${(s.dpsMult||1).toFixed(2)})`, id: Math.random() });
 
-    } else if (type === "gold") {
-      s.goldMult = +((s.goldMult || 1) * 1.1).toFixed(2);
-      setCenterPopup({ text: `🎁 GOLD +10% (×${(s.goldMult||1).toFixed(2)})`, id: Math.random() });
+  } else if (type === "gold") {
+    s.goldMult = +((s.goldMult || 1) * 1.1).toFixed(2);
+    setCenterPopup({ text: `🎁 GOLD +10% (×${(s.goldMult||1).toFixed(2)})`, id: Math.random() });
 
-    } else if (type === "diamond") {
-      s.diamonds = (s.diamonds || 0) + 1;
-      setCenterPopup({ text: `🎁 +1 💎 (Diamonds: ${s.diamonds})`, id: Math.random() });
-    }
-
-    s.giftReady = false;
-    {
-      const now = Date.now();
-      const stepSec = currentGiftIntervalSec(s, now);
-      s.giftNextAt = now + stepSec * 1000; // full interval after claim
-    }
-
-    setGiftReadyFlag(false);
-    try { play(S_GIFT); } catch {}
-    save?.();
+  } else if (type === "diamond") {
+    s.diamonds = (s.diamonds || 0) + 1;
+    setCenterPopup({ text: `🎁 +1 💎 (Diamonds: ${s.diamonds})`, id: Math.random() });
   }
+
+  s.giftReady = false;
+  {
+    const now = Date.now();
+    const stepSec = currentGiftIntervalSec(s, now);
+    s.giftNextAt = now + stepSec * 1000; // full interval after claim
+  }
+
+  setGiftReadyFlag(false);
+  try { play(S_GIFT); } catch {}
+  save?.();
+}
+
 
 // === END PART 2 ===
 
@@ -877,6 +900,7 @@ function freshState(){
     diamonds:0, nextDiamondPrize: rollDiamondPrize(),
 
     autoDogLastAt: now,
+autoDogNextAt: now + DOG_INTERVAL_SEC * 1000,
     autoDogBank: 0,
     autoDogPending: false,
 
@@ -1321,9 +1345,9 @@ function tick(dt){
       s.gold += coinsGain; setUi(u => ({ ...u, gold: s.gold }));
       addPlayerScorePoints(s, coinsGain);
 
-      const mleoTxt = formatMleo(mleoGainPreview || 0);
+const mleoTxt = formatMleoShort(mleoGainPreview || 0);
+setCenterPopup({ text: `⛏️ +${formatShort(coinsGain)} coins • +${mleoTxt} MLEO`, id: Math.random() });
 
-      setCenterPopup({ text: `⛏️ +${formatShort(coinsGain)} coins • +${mleoTxt} MLEO`, id: Math.random() });
 
       s.lanes[l].rockCount += 1;
       s.lanes[l].rock = newRock(l, s.lanes[l].rockCount);
@@ -1412,8 +1436,11 @@ function save() {
       diamonds: s.diamonds || 0,
       nextDiamondPrize: s.nextDiamondPrize,
 
-      autoDogLastAt: s.autoDogLastAt,
-      autoDogBank: s.autoDogBank,
+     // auto-dog
+autoDogLastAt: s.autoDogLastAt,
+autoDogNextAt: s.autoDogNextAt,
+autoDogBank: s.autoDogBank,
+
       autoDogPending: !!s.autoDogPending,
 
       costBase: s.costBase,
@@ -1559,7 +1586,8 @@ function onOfflineCollect() {
 
   if (addCoins > 0 || addMleo > 0) {
   setCenterPopup({
-  text: `⛏️ +${formatShort(addCoins)} coins • +${formatMleo(addMleo)} MLEO`,
+  text: `⛏️ +${formatShort(addCoins)} coins • +${formatMleoShort(addMleo)} MLEO`,
+
   id: Math.random()
 });
 
@@ -1581,90 +1609,61 @@ function chooseGiftDogLevelForRegularGift(s) {
 
 function accrueBankDogsUpToNow(s) {
   if (!s) return;
-  const intervalMs = DOG_INTERVAL_SEC * 1000;
-  const now  = Date.now();
-  const last = s.autoDogLastAt || now;
+  const period = DOG_INTERVAL_SEC * 1000;
+  const now = Date.now();
 
-  if (s.autoDogPending) {
-    if (hasFreeSlot(s)) {
-      const lvl = chooseAutoDogLevel(s);
-      const ok  = spawnMiner(s, lvl);
-      if (ok) {
-        s.autoDogPending = false;
-        s.autoDogLastAt  = now;
-        setCenterPopup?.({ text: `🐶 Auto Dog (LV ${lvl})`, id: Math.random() });
-        save?.();
-      }
-    }
-    return;
+  if (!s.autoDogNextAt || Number.isNaN(s.autoDogNextAt)) {
+    s.autoDogNextAt = now + period;
   }
 
-  if (now - last >= intervalMs) {
-    if (hasFreeSlot(s)) {
-      const lvl = chooseAutoDogLevel(s);
-      const ok  = spawnMiner(s, lvl);
-      if (ok) {
-        s.autoDogLastAt = now;
-        setCenterPopup?.({ text: `🐶 Auto Dog (LV ${lvl})`, id: Math.random() });
-        save?.();
-      }
-    } else {
-      s.autoDogPending = true;
-    }
+  if (now >= s.autoDogNextAt) {
+    const intervals = Math.floor((now - s.autoDogNextAt) / period) + 1;
+    s.autoDogBank = Math.min(DOG_BANK_CAP, (s.autoDogBank || 0) + intervals);
+    s.autoDogNextAt += intervals * period;
+    save?.();
   }
 }
 
 function tryDistributeBankDog(s) {
   if (!s) return;
-  if (!s.autoDogPending) return;
   if (!hasFreeSlot(s)) return;
+  if ((s.autoDogBank || 0) <= 0) return;
 
   const lvl = chooseAutoDogLevel(s);
-  const ok  = spawnMiner(s, lvl);
+  const ok = spawnMiner(s, lvl);
   if (ok) {
-    s.autoDogPending = false;
-    s.autoDogLastAt  = Date.now();
+    s.autoDogBank = Math.max(0, (s.autoDogBank || 0) - 1);
     setCenterPopup?.({ text: `🐶 Auto Dog (LV ${lvl})`, id: Math.random() });
     save?.();
   }
 }
 
+
 function handleOfflineAccrual(s, elapsedMs) {
   if (!s) return 0;
 
-  const intervalMs = DOG_INTERVAL_SEC * 1000;
-  const OFF_CAP = 6;
-  let ticks = Math.floor(elapsedMs / intervalMs);
-  if (ticks > OFF_CAP) ticks = OFF_CAP;
+   // Auto-dog: accrue by nextAt → bank (cap 6), then try to deploy
+  {
+    const period = DOG_INTERVAL_SEC * 1000;
+    const now = Date.now();
 
-  let placed = 0;
-  for (let i = 0; i < ticks; i++) {
-    if (!hasFreeSlot(s)) {
-      s.autoDogPending = true;
-      if ((Date.now() - (s.autoDogLastAt || 0)) < intervalMs) {
-        s.autoDogLastAt = Date.now() - intervalMs;
-      }
-      break;
+    if (!s.autoDogNextAt || Number.isNaN(s.autoDogNextAt)) {
+      s.autoDogNextAt = now + period;
     }
-    const lvl = chooseAutoDogLevel(s);
-    const ok  = spawnMiner(s, lvl);
-    if (!ok) {
-      s.autoDogPending = true;
-      if ((Date.now() - (s.autoDogLastAt || 0)) < intervalMs) {
-        s.autoDogLastAt = Date.now() - intervalMs;
-      }
-      break;
+    if (now >= s.autoDogNextAt) {
+      const intervals = Math.floor((now - s.autoDogNextAt) / period) + 1;
+      s.autoDogBank = Math.min(DOG_BANK_CAP, (s.autoDogBank || 0) + intervals);
+      s.autoDogNextAt += intervals * period;
     }
-    placed += 1;
+
+    while ((s.autoDogBank || 0) > 0 && hasFreeSlot(s)) {
+      const lvl = chooseAutoDogLevel(s);
+      const ok = spawnMiner(s, lvl);
+      if (!ok) break;
+      s.autoDogBank -= 1;
+    }
   }
 
-  if (s.autoDogPending) {
-  } else if (placed > 0) {
-    s.autoDogLastAt = Date.now();
-  } else {
-    const rem = elapsedMs % intervalMs;
-    s.autoDogLastAt = Date.now() - rem;
-  }
 
   const CAP_MS = 12 * 60 * 60 * 1000;
   const simMs = Math.min(elapsedMs, CAP_MS);
@@ -1831,15 +1830,15 @@ const giftProgress = (() => {
   return Math.max(0, Math.min(1, 1 - remain / total)); 
 })();
 
-const dogProgress = (() => { 
-  const s = stateRef.current; if (!s) return 0; 
-  if ((s.autoDogBank || 0) >= DOG_BANK_CAP) return 1; 
-  const now = Date.now(); 
-  const total = DOG_INTERVAL_SEC * 1000; 
-  const last = s.autoDogLastAt || now; 
-  const elapsed = Math.max(0, now - last); 
-  return Math.max(0, Math.min(1, elapsed / total)); 
+const dogProgress = (() => {
+  const s = stateRef.current; if (!s) return 0;
+  if ((s.autoDogBank || 0) >= DOG_BANK_CAP) return 1;
+  const now = Date.now();
+  const total = DOG_INTERVAL_SEC * 1000;
+  const remain = Math.max(0, (s.autoDogNextAt || (now + total)) - now);
+  return Math.max(0, Math.min(1, 1 - remain / total));
 })();
+
 
 const diamondsReady = (stateRef.current?.diamonds || 0) >= 3;
 
@@ -1916,7 +1915,8 @@ function claimCoinsToMining() {
   saveMiningState(mst);
   setMining(mst);
 
-  setGiftToastWithTTL(`Claimed ${formatMleo(add)} MLEO from coins`);
+  setGiftToastWithTTL(`Claimed ${formatMleoShort(add)} MLEO from coins`);
+
 }
 
 // ===== HUD Info modal state & content =====
@@ -2393,7 +2393,7 @@ return (
 
 >
               <span className="align-middle">🪓</span>
-              <span className="align-middle">+10% (Cost {formatShort(dpsCostNow)})</span>
+              <span className="align-middle">+10% ({formatShort(dpsCostNow)})</span>
             </button>
 
             {/* GOLD */}
@@ -2408,7 +2408,7 @@ className={`${BTN_BASE} ${BTN_H} ${BTN_W} ${
 
 >
               <span className="align-middle">🟡</span>
-              <span className="align-middle">+10% (Cost {formatShort(goldCostNow)})</span>
+              <span className="align-middle">+10% ({formatShort(goldCostNow)})</span>
             </button>
 
             {/* GAIN */}
@@ -2462,7 +2462,8 @@ className={`${BTN_BASE} ${BTN_H} ${BTN_W} ${
     }`}
     style={(mining?.balance || 0) > 0 ? { animation: "nudge 1.8s ease-in-out infinite" } : undefined}
   >
-    {formatMleo(mining?.balance || 0)} MLEO
+    {formatMleoShort(mining?.balance || 0)} MLEO
+
   </span>
 </button>
 
@@ -2493,9 +2494,10 @@ className={`${BTN_BASE} ${BTN_H} ${BTN_W} ${
                 className="ml-2 text-gray-300 hover:text-white underline-offset-2 hover:underline"
                 title="Open Mining"
               >
-                Vault: <b className="text-cyan-300 tabular-nums">
-  {formatMleo(mining?.vault || 0)}
+Vault: <b className="text-cyan-300 tabular-nums">
+  {formatMleoVault(mining?.vault || 0)}
 </b> MLEO
+
 
               </button>
             </div>
@@ -2570,7 +2572,8 @@ className={`${BTN_BASE} ${BTN_H} ${BTN_W} ${
               </b>{" "}
               coins and{" "}
              <b className="text-yellow-300">
-  {formatMleo(stateRef.current?.pendingOfflineMleo || 0)}
+  {formatMleoShort(stateRef.current?.pendingOfflineMleo || 0)}
+
 </b>{" "}
 MLEO
 
