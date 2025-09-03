@@ -1,7 +1,0 @@
---- a/game/pages/mleo-miners.js
-+++ b/game/pages/mleo-miners.js
-@@
--              <span className="align-middle">🟡</span>
--              <span className="align-middle">+10% ({formatShort(goldCostNow)})</span>
-+              <span className="align-middle">🟡</span>
-+              <span className="align-middle">TRY +10% ({formatShort(goldCostNow)})</span>
