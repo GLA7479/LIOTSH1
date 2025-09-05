@@ -4,6 +4,11 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import PWAInstall from "../components/PWAInstall";
+import { useRouter } from "next/router";
+import dynamic from "next/dynamic";
+const EmailTermsGate = dynamic(() => import("../components/EmailTermsGate"), { ssr: false });
+
+
 
 const GAME_ENTRY_URL = "/play"; // שנה אם צריך
 
@@ -764,6 +769,9 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [idx, setIdx] = useState(0);
   const [showHow, setShowHow] = useState(false);
+const router = useRouter();
+const [showGate, setShowGate] = useState(false);
+
 
   useEffect(() => {
     setMounted(true);
@@ -846,12 +854,13 @@ export default function Home() {
 
             <PWAInstall />
 
-            <Link
-              href={GAME_ENTRY_URL}
-              className="hidden sm:inline-flex px-4 py-2 rounded-xl bg-yellow-400 text-black font-bold hover:bg-yellow-300 transition"
-            >
-              {t.start}
-            </Link>
+            <button
+  onClick={() => setShowGate(true)}
+  className="hidden sm:inline-flex px-4 py-2 rounded-xl bg-yellow-400 text-black font-bold hover:bg-yellow-300 transition"
+>
+  {t.start}
+</button>
+
           </div>
         </header>
 
@@ -871,12 +880,14 @@ export default function Home() {
             </p>
 
             <div className={`mt-8 flex ${dir==='rtl' ? 'flex-col sm:flex-row-reverse' : 'flex-col sm:flex-row'} gap-3`}>
-              <Link
-                href={GAME_ENTRY_URL}
-                className="px-6 py-3 rounded-2xl bg-yellow-400 text-black font-extrabold text-lg shadow hover:bg-yellow-300 transition"
-              >
-                {t.start}
-              </Link>
+<button
+  onClick={() => setShowGate(true)}
+  className="px-6 py-3 rounded-xl bg-yellow-400 text-black font-bold hover:bg-yellow-300 transition"
+>
+  {t.start}
+</button>
+
+
 
               <button
                 onClick={() => setShowHow(true)}
@@ -972,6 +983,14 @@ export default function Home() {
         </div>,
         document.body
       )}
+{showGate && (
+  <EmailTermsGate
+    onPassed={() => router.push(GAME_ENTRY_URL)}
+    onClose={() => setShowGate(false)}
+  />
+)}
+
+
     </>
   );
 }
