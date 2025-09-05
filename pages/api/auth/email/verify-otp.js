@@ -1,12 +1,25 @@
-const PENDING = global._PENDING_EMAILS || (global._PENDING_EMAILS = new Map());
+// Next.js API route – DEV: accept a fixed OTP: 1234
+const ONE_MONTH = 60 * 60 * 24 * 30; // seconds
+
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).end();
-  const { email, otp } = req.body || {};
-  const entry = PENDING.get(email);
-  if (!entry || otp !== entry.code || Date.now() > entry.expiresAt) {
-    return res.status(400).json({ error: "Invalid or expired code" });
+  if (req.method !== "POST") {
+    res.setHeader("Allow", "POST");
+    return res.status(405).json({ verified: false, error: "Method not allowed" });
   }
-  res.setHeader("Set-Cookie", `mleo_email_session=1; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`);
-  PENDING.delete(email);
-  res.status(200).json({ verified: true });
+
+  try {
+    const { otp } = req.body || {};
+    if (String(otp || "").trim() === "1234") {
+      // Mark session as verified using an HttpOnly cookie on same domain
+      res.setHeader("Set-Cookie", [
+        // value "1", Lax is enough (same-site); Path=/ for whole app
+        `mleo_verified=1; Path=/; Max-Age=${ONE_MONTH}; HttpOnly; SameSite=Lax`,
+      ]);
+      return res.status(200).json({ verified: true });
+    } else {
+      return res.status(401).json({ verified: false, error: "Invalid code" });
+    }
+  } catch (e) {
+    return res.status(500).json({ verified: false, error: "Server error" });
+  }
 }
