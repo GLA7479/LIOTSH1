@@ -6,6 +6,18 @@ import { useEffect, useRef, useState } from "react";
 import Layout from "../components/Layout";
 import { useConnectModal, useAccountModal } from "@rainbow-me/rainbowkit";
 import { useAccount } from "wagmi";
+import { createPortal } from "react-dom";
+
+// --- Portal modal for iOS PWA tap issues ---
+function PortalModal({ open, children, z = 10000 }) {
+  if (!open || typeof window === "undefined") return null;
+  return createPortal(
+    <div className={`fixed inset-0 z-[${z}]`}>
+      {children}
+    </div>,
+    document.body
+  );
+}
 
 
 
@@ -2229,95 +2241,95 @@ return (
         </div>
       )}
 
-      {/* Intro Overlay */}
-      {showIntro && (
-        <div className="absolute inset-0 flex flex-col items-center justify-start pt-10 bg-black/80 z-[50] text-center p-6">
-          <img src="/images/leo-intro.png" alt="Leo" width={160} height={160} className="mb-4 rounded-full" />
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-yellow-400 mb-2">⛏️ MLEO Miners</h1>
+ <PortalModal open={showIntro} z={10002}>
+  <div
+    className="fixed inset-0 bg-black/80 z-[10002] flex flex-col items-center justify-start pt-10 text-center p-6"
+    style={{ WebkitTapHighlightColor: "transparent", touchAction: "manipulation" }}
+  >
+    <img src="/images/leo-intro.png" alt="Leo" width={160} height={160} className="mb-4 rounded-full" />
+    <h1 className="text-3xl sm:text-4xl font-extrabold text-yellow-400 mb-2">⛏️ MLEO Miners</h1>
+    <p className="text-sm sm:text-base text-gray-200 mb-4">Merge miners, break rocks, earn gold.</p>
 
-          <p className="text-sm sm:text-base text-gray-200 mb-4">Merge miners, break rocks, earn gold.</p>
-
-          {firstTimeNeedsTerms && (
-            <div className="mb-4 w-full max-w-md">
-              <div className="px-3 py-2 rounded-lg bg-yellow-300/20 text-yellow-200 border border-yellow-300/40 text-xs sm:text-sm">
-                You must read and accept the <b>Terms &amp; Conditions</b> before playing for the first time.
-              </div>
-            </div>
-          )}
-
-          <div className="flex gap-3 flex-wrap justify-center">
-            <button
-              onClick={async () => {
-                try { play?.(S_CLICK); } catch {}
-                if (firstTimeNeedsTerms) { setShowTerms(true); return; }
-                const s = stateRef.current;
-                if (s && !s.onceSpawned) { spawnMiner(s, 1); s.onceSpawned = true; save(); }
-
-                setShowIntro(false);
-                setGamePaused(false);
-                try { await enterFullscreenAndLockMobile(); } catch {}
-
-                setTimeout(() => {
-                  if (isConnected) {
-                    openAccountModal?.();
-                  } else {
-                    openConnectModal?.();
-                  }
-                }, 0);
-              }}
-              className="px-5 py-3 font-bold rounded-lg text-base shadow bg-indigo-400 hover:bg-indigo-300 text-black"
-            >
-              CONNECT WALLET
-            </button>
-
-            <button
-              onClick={async () => {
-                try { play?.(S_CLICK); } catch {}
-                if (firstTimeNeedsTerms) { setShowTerms(true); return; }
-                const s = stateRef.current;
-                if (s && !s.onceSpawned) { spawnMiner(s, 1); s.onceSpawned = true; save(); }
-                setShowIntro(false);
-                setGamePaused(false);
-                try { await enterFullscreenAndLockMobile(); } catch {}
-              }}
-              className="px-5 py-3 font-bold rounded-lg text-base shadow bg-yellow-400 hover:bg-yellow-300 text-black"
-            >
-              PLAY
-            </button>
-
-            <button
-              onClick={() => setShowHowTo(true)}
-              className="px-5 py-3 font-bold rounded-lg text-base shadow bg-emerald-400 hover:bg-emerald-300 text-black"
-            >
-              HOW TO PLAY
-            </button>
-
-            <button
-              onClick={() => setShowMiningInfo(true)}
-              className="px-5 py-3 font-bold rounded-lg text-base shadow bg-cyan-400 hover:bg-cyan-300 text-black"
-            >
-              MINING
-            </button>
-
-            <button
-              onClick={() => setShowTerms(true)}
-              className="px-5 py-3 font-bold rounded-lg text-base shadow bg-teal-400 hover:bg-teal-300 text-black"
-            >
-              TERMS
-            </button>
-          </div>
-
+    {firstTimeNeedsTerms && (
+      <div className="mb-4 w-full max-w-md">
+        <div className="px-3 py-2 rounded-lg bg-yellow-300/20 text-yellow-200 border border-yellow-300/40 text-xs sm:text-sm">
+          You must read and accept the <b>Terms &amp; Conditions</b> before playing for the first time.
         </div>
-      )}
+      </div>
+    )}
+
+    <div className="flex gap-3 flex-wrap justify-center">
+      <button
+        onClick={async () => {
+          try { play?.(S_CLICK); } catch {}
+          if (firstTimeNeedsTerms) { setShowTerms(true); return; }
+          const s = stateRef.current;
+          if (s && !s.onceSpawned) { spawnMiner(s, 1); s.onceSpawned = true; save(); }
+          setShowIntro(false);
+          setGamePaused(false);
+          try { await enterFullscreenAndLockMobile(); } catch {}
+          setTimeout(() => {
+            if (isConnected) openAccountModal?.(); else openConnectModal?.();
+          }, 0);
+        }}
+        className="px-5 py-3 font-bold rounded-lg text-base shadow bg-indigo-400 hover:bg-indigo-300 text-black"
+        style={{ touchAction: "manipulation" }}
+      >
+        CONNECT WALLET
+      </button>
+
+      <button
+        onClick={async () => {
+          try { play?.(S_CLICK); } catch {}
+          if (firstTimeNeedsTerms) { setShowTerms(true); return; }
+          const s = stateRef.current;
+          if (s && !s.onceSpawned) { spawnMiner(s, 1); s.onceSpawned = true; save(); }
+          setShowIntro(false);
+          setGamePaused(false);
+          try { await enterFullscreenAndLockMobile(); } catch {}
+        }}
+        className="px-5 py-3 font-bold rounded-lg text-base shadow bg-yellow-400 hover:bg-yellow-300 text-black"
+        style={{ touchAction: "manipulation" }}
+      >
+        PLAY
+      </button>
+
+      <button
+        onClick={() => setShowHowTo(true)}
+        className="px-5 py-3 font-bold rounded-lg text-base shadow bg-emerald-400 hover:bg-emerald-300 text-black"
+        style={{ touchAction: "manipulation" }}
+      >
+        HOW TO PLAY
+      </button>
+
+      <button
+        onClick={() => setShowMiningInfo(true)}
+        className="px-5 py-3 font-bold rounded-lg text-base shadow bg-cyan-400 hover:bg-cyan-300 text-black"
+        style={{ touchAction: "manipulation" }}
+      >
+        MINING
+      </button>
+
+      <button
+        onClick={() => setShowTerms(true)}
+        className="px-5 py-3 font-bold rounded-lg text-base shadow bg-teal-400 hover:bg-teal-300 text-black"
+        style={{ touchAction: "manipulation" }}
+      >
+        TERMS
+      </button>
+    </div>
+  </div>
+</PortalModal>
+
 
       {/* === END PART 8 === */}
 
 
 {/* === START PART 9 === */}
                 {/* ADD Ad Modal */}
-      {showAdModal && (
-        <div className="fixed inset-0 z-[10000] bg-black/80 flex items-center justify-center p-4">
-          <div className="bg-white text-slate-900 max-w-md w-full rounded-2xl p-5">
+ <PortalModal open={showAdModal} z={10000}>
+   <div className="bg-black/80 fixed inset-0 flex items-center justify-center p-4">
+     <div className="bg-white text-slate-900 max-w-md w-full rounded-2xl p-5">
             <h2 className="text-xl font-extrabold mb-3">Watch to Earn</h2>
 
             <video
@@ -2369,7 +2381,7 @@ return (
             </div>
           </div>
         </div>
-      )}
+      </PortalModal>
 
 {/* ===== Unified Canvas wrapper (no lanes changes) ===== */}
 <div
@@ -2801,70 +2813,65 @@ Vault: <b className="text-cyan-300 tabular-nums">
         )}
       </div>
 
-      {/* Offline COLLECT overlay */}
-      {showCollect && (
-        <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/85 px-6 text-center">
-          <div className="bg-white/10 backdrop-blur rounded-2xl p-6 border border-white/20 shadow-2xl max-w-sm w-full">
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <img src={IMG_COIN} alt="coin" className="w-6 h-6" />
-              <h3 className="text-xl font-extrabold text-white">While you were away…</h3>
-            </div>
-            <p className="text-gray-200 mb-4">
-              Earned{" "}
-              <b className="text-yellow-300">
-                {formatShort(stateRef.current?.pendingOfflineGold || 0)}
-              </b>{" "}
-              coins and{" "}
-             <b className="text-yellow-300">
-  {formatMleoShort(stateRef.current?.pendingOfflineMleo || 0)}
+      {/* Offline COLLECT — דרך פורטל */}
+<PortalModal open={showCollect} z={10010}>
+  <div className="fixed inset-0 z-[10010] flex items-center justify-center bg-black/85 px-6 text-center">
+    <div className="bg-white/10 backdrop-blur rounded-2xl p-6 border border-white/20 shadow-2xl max-w-sm w-full">
+      <div className="flex items-center justify-center gap-2 mb-3">
+        <img src={IMG_COIN} alt="coin" className="w-6 h-6" />
+        <h3 className="text-xl font-extrabold text-white">While you were away…</h3>
+      </div>
+      <p className="text-gray-200 mb-4">
+        Earned{" "}
+        <b className="text-yellow-300">{formatShort(stateRef.current?.pendingOfflineGold || 0)}</b>{" "}
+        coins and{" "}
+        <b className="text-yellow-300">{formatMleoShort(stateRef.current?.pendingOfflineMleo || 0)}</b>{" "}
+        MLEO
+      </p>
+      <button
+        onClick={onOfflineCollect}
+        onTouchStart={() => {}}
+        className="mx-auto px-6 py-3 rounded-xl bg-yellow-400 text-black font-extrabold text-lg shadow active:scale-95"
+      >
+        COLLECT
+      </button>
+    </div>
+  </div>
+</PortalModal>
 
-</b>{" "}
-MLEO
+    {/* Reset confirm — דרך פורטל */}
+<PortalModal open={showResetConfirm} z={10030}>
+  <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-[10030]">
+    <div className="bg-white text-slate-900 max-w-md w-full rounded-2xl p-6 shadow-2xl">
+      <h2 className="text-2xl font-extrabולד mb-2">Reset Progress?</h2>
+      <p className="text-sm text-slate-700 mb-4">
+        This will permanently delete your save and send you back to the start.
+      </p>
+      <div className="flex items-center justify-end gap-2">
+        <button
+          onClick={() => setShowResetConfirm(false)}
+          onTouchStart={() => {}}
+          className="px-4 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-900 font-semibold"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={resetGame}
+          onTouchStart={() => {}}
+          className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-extrabold"
+        >
+          Yes, reset
+        </button>
+      </div>
+    </div>
+  </div>
+</PortalModal>
 
-            </p>
-
-            <button
-              onClick={onOfflineCollect}
-              className="mx-auto px-6 py-3 rounded-xl bg-yellow-400 text-black font-extrabold text-lg shadow active:scale-95"
-            >
-              COLLECT
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Reset confirm */}
-      {showResetConfirm && (
-        <div className="fixed inset-0 z-[10000] bg-black/80 flex items-center justify-center p-4">
-          <div className="bg-white text-slate-900 max-w-md w-full rounded-2xl p-6 shadow-2xl">
-            <h2 className="text-2xl font-extrabולד mb-2">Reset Progress?</h2>
-            <p className="text-sm text-slate-700 mb-4">
-              This will permanently delete your save and send you back to the start.
-            </p>
-
-            <div className="flex items-center justify-end gap-2">
-              <button
-                onClick={() => setShowResetConfirm(false)}
-                className="px-4 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-900 font-semibold"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={resetGame}
-                className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-extrabold"
-              >
-                Yes, reset
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* How to Play modal */}
-      {showHowTo && (
-        <div className="fixed inset-0 z-[10000] bg-black/80 flex items-center justify-center p-4">
-          <div className="bg-white text-slate-900 max-w-md w-full rounded-2xl p-6 shadow-2xl overflow-auto max-h-[85vh]">
-            <h2 className="text-2xl font-extrabold mb-3">How to Play</h2>
+      {/* How to Play — דרך פורטל */}
+<PortalModal open={showHowTo} z={10020}>
+  <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-[10020]">
+    <div className="bg-white text-slate-900 max-w-md w-full rounded-2xl p-6 shadow-2xl overflow-auto max-h-[85vh]">
+      <h2 className="text-2xl font-extrabold mb-3">How to Play</h2>
 
             <div className="space-y-4 text-sm text-slate-700">
               <section>
@@ -2916,26 +2923,33 @@ MLEO
               </section>
             </div>
 
-            <div className="flex justify-end gap-2 mt-4">
-              <button
-                onClick={() => setShowHowTo(false)}
-                className="px-4 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          <div className="flex justify-end gap-2 mt-4">
+        <button
+          onClick={() => setShowHowTo(false)}
+          onTouchStart={() => {}}
+          className="px-4 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</PortalModal>
 
-      {/* Terms modal */}
-      {showTerms && (
-        <div className="fixed inset-0 z-[10000] bg-black/80 flex items-center justify-center p-4">
-          <div className="bg-white text-slate-900 max-w-md w-full rounded-2xl p-6 shadow-2xl overflow-auto max-h-[85vh]">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-2xl font-extrabold">Terms &amp; Conditions</h2>
-              <button onClick={() => setShowTerms(false)} className="px-3 py-1 rounded-lg bg-slate-900 text-white hover:bg-slate-800 text-sm font-extrabold">Close</button>
-            </div>
+      {/* Terms — דרך פורטל */}
+<PortalModal open={showTerms} z={10020}>
+  <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-[10020]">
+    <div className="bg-white text-slate-900 max-w-md w-full rounded-2xl p-6 shadow-2xl overflow-auto max-h-[85vh]">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-2xl font-extrabold">Terms &amp; Conditions</h2>
+        <button
+          onClick={() => setShowTerms(false)}
+          onTouchStart={() => {}}
+          className="px-3 py-1 rounded-lg bg-slate-900 text-white hover:bg-slate-800 text-sm font-extrabold"
+        >
+          Close
+        </button>
+      </div>
 
            <div className="text-sm text-slate-700 space-y-4 text-left">
   <section>
@@ -3039,9 +3053,9 @@ MLEO
                 I Agree
               </button>
             </div>
-          </div>
-        </div>
-      )}
+       </div>
+  </div>
+</PortalModal>
 
       {/* HUD Info modal (Coins/DPS/GOLD/Spawn/Gifts/🎁/🦊) */}
       {hudModal && (
