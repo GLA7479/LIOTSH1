@@ -3,36 +3,36 @@
 @tailwind components;
 @tailwind utilities;
 
-/* iOS safe-area */
+/* ===== iOS/Android real viewport height (updated by JS too) ===== */
 :root {
-  --app-100vh: 100svh; /* יתעדכן גם מתוך קוד המשחק שלך */
+  /* start with small-viewport unit; JS will overwrite to visualViewport height on iOS */
+  --app-100vh: 100svh;
 }
-/* עדיפות ל-100dvh כשנתמך */
 @supports (height: 100dvh) {
   :root { --app-100vh: 100dvh; }
 }
 
-/* בסיס עמוד */
+/* ===== Base document ===== */
 html, body, #__next { height: 100%; }
 html { scroll-behavior: smooth; }
-body { overscroll-behavior: none; }
+body {
+  background: #0b1220;                /* solid base so no “gaps” on iOS bars resize */
+  color: #fff;
+  overscroll-behavior: none;           /* stop rubber-band around canvas */
+  -webkit-text-size-adjust: 100%;
+}
 
-/* הסתרת scrollbar אלגנטית כשצריך */
+/* Hide scrollbars when needed */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* אנימציות עדינות למסכים/טוסט */
-.splash-enter {
-  opacity: 0;
-  transform: translateY(8px) scale(0.98);
-}
+/* ===== Simple transitions/animations you already use ===== */
+.splash-enter { opacity: 0; transform: translateY(8px) scale(0.98); }
 .splash-enter-active {
-  opacity: 1;
-  transform: translateY(0) scale(1);
+  opacity: 1; transform: translateY(0) scale(1);
   transition: opacity .5s ease, transform .5s ease;
 }
 
-/* טוסט/פופאפים */
 @keyframes popfade {
   0% { opacity: 0; transform: translateY(6px) scale(0.96); }
   15% { opacity: 1; transform: translateY(0) scale(1); }
@@ -40,7 +40,6 @@ body { overscroll-behavior: none; }
   100% { opacity: 0; transform: translateY(-6px) scale(0.98); }
 }
 
-/* ===== Splash / Animations ===== */
 @keyframes mleo-pop {
   0% { transform: scale(.92) rotate(-2deg); opacity: 0; }
   60% { transform: scale(1.02) rotate(0); opacity: 1; }
@@ -61,7 +60,7 @@ body { overscroll-behavior: none; }
 }
 .animate-mleo-loader { animation: mleo-loader 1200ms ease-in-out infinite; }
 
-/* אנימציית ציפה לאייקון הטוקן (לפני ה-INTRO) */
+/* Floating token teaser (optional) */
 @keyframes tokenFloat {
   0% { transform: translateY(0) scale(1); }
   50% { transform: translateY(-6px) scale(1.02); }
@@ -69,7 +68,7 @@ body { overscroll-behavior: none; }
 }
 .animate-token-float { animation: tokenFloat 3s ease-in-out infinite; }
 
-/* רקע הדרגתי למצב טעינה/Fallback */
+/* Nice splash background you used */
 .mleo-splash-bg {
   background-image:
     radial-gradient(62% 62% at 50% 38%, rgba(255,220,120,.15) 0%, rgba(255,220,120,0) 60%),
