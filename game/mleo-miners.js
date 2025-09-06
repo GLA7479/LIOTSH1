@@ -2378,7 +2378,7 @@ return (
   style={{
     maxWidth: isDesktop ? "1024px" : "680px",
     // גובה נטו שמתאים לשני האתרים (Header/ללא Header)
-  height: "calc(var(--app-100vh, 100svh) - var(--header-h))",
+  height: "calc(var(--app-100vh, 100svh) - var(--header-h, 0px))",
 
 
     // בדסקטופ שמור יחס קלאסי; במובייל מלא גובה

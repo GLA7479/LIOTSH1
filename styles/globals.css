@@ -87,3 +87,16 @@ body {
 
 /* Canvas ergonomics */
 #miners-canvas { touch-action: none; display: block; }
+
+/* --- UI over canvas layering (iOS-safe) --- */
+.mleo-wrap { position: relative; }
+.mleo-canvas { position: absolute; inset: 0; z-index: 0; }
+.mleo-ui     { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
+.mleo-ui [data-clickable], 
+.mleo-ui button, 
+.mleo-ui a { pointer-events: auto; touch-action: manipulation; }
+
+/* אם יש לך מודלים/טוסטים צפים */
+.mleo-modal, .mleo-toast { position: absolute; inset: 0; z-index: 20; pointer-events: none; }
+.mleo-modal * , .mleo-toast * { pointer-events: auto; }
+
