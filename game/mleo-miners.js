@@ -2209,22 +2209,16 @@ useEffect(() => {
 const hudTop = `calc(env(safe-area-inset-top, 0px) + ${(isIOS ? HUD_TOP_IOS_PX : HUD_TOP_ANDROID_PX)}px)`;
 return (
 
-  <Layout>
-    <div
-      ref={wrapRef}
-      className="
-        relative flex flex-col items-center justify-start
-        bg-gray-900 text-white
-        w-full min-h-[var(--app-100vh,100svh)]
-        overflow-hidden select-none
-        pt-[calc(env(safe-area-inset-top,0px)+8px)]
-        pb-[calc(env(safe-area-inset-bottom,0px)+16px)]
-      "
-      style={{
-        paddingTop: isFullscreen ? 0 : undefined,
-        paddingBottom: isFullscreen ? 0 : undefined,
-      }}
-    >
+<Layout>
+  <div
+    ref={wrapRef}
+    className="
+      relative flex flex-col items-center justify-start
+      bg-gray-900 text-white
+      w-full h-full overflow-hidden select-none
+    "
+  >
+
       {/* Landscape overlay on mobile */}
       {isMobileLandscape && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black text-white text-center p-6">

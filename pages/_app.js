@@ -1,3 +1,4 @@
+// pages/_app.js
 import "../styles/globals.css"; // חשוב לטעון את ה-CSS הגלובלי
 import "@rainbow-me/rainbowkit/styles.css";
 

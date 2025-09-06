@@ -74,3 +74,16 @@ body {
     radial-gradient(62% 62% at 50% 38%, rgba(255,220,120,.15) 0%, rgba(255,220,120,0) 60%),
     linear-gradient(135deg, #0b1220, #0e1729 60%, #0b1220);
 }
+
+/* Safe areas only in PWA (standalone). Safari usually 0 anyway */
+@media (display-mode: standalone) {
+  .app-shell {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* Canvas ergonomics */
+#miners-canvas { touch-action: none; display: block; }

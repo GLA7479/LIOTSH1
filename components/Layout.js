@@ -21,16 +21,12 @@ export default function Layout({ children }) {
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
       </Head>
 
-      {/* App shell: true device height + safe areas */}
+      {/* App shell: true device height */}
       <div
-        className="relative w-full text-white overflow-hidden"
+        className="app-shell relative w-full text-white overflow-hidden"
         style={{
           height: "var(--app-100vh, 100svh)",
-    minHeight: "var(--app-100vh, 100svh)",
-          paddingTop: "env(safe-area-inset-top)",
-          paddingBottom: "env(safe-area-inset-bottom)",
-          paddingLeft: "env(safe-area-inset-left)",
-          paddingRight: "env(safe-area-inset-right)",
+          minHeight: "var(--app-100vh, 100svh)",
           background: "#0b1220",
         }}
       >
