@@ -3161,7 +3161,7 @@ const BTN_DIS  = "opacity-60 cursor-not-allowed";
    <span
   className="relative inline-grid place-items-center"
   style={{
-    width: UI_SPAWN_ICON_BOX * 2.0,
+    width: UI_SPAWN_ICON_BOX * 2.2,
     height: UI_SPAWN_ICON_BOX * 1.0,
     marginLeft: -8,            // <<< הזזה שמאלה ~8px
   }}
@@ -3223,18 +3223,25 @@ const BTN_DIS  = "opacity-60 cursor-not-allowed";
   disabled={!canBuyGold}
   className={`${BTN_BASE} ${BTN_H_FIX} ${BTN_W_FIX} ${
     canBuyGold
-      ? "bg-amber-400 hover:bg-amber-300 ring-amber-300 text-slate-900"
+       ? "bg-amber-400 hover:bg-amber-300 ring-amber-300 text-slate-900"
       : `bg-amber-400 ring-amber-300 text-slate-900 ${BTN_DIS}`
   }`}
 >
   <div className="flex flex-col items-center justify-center leading-tight">
     <div className="flex items-center gap-1">
-      <span>🟡</span>
-      <span className="font-extrabold">+10%</span>
+      <img
+  src="/images/silver.png"
+  alt="Lio"
+  className="w-7 h-6 inline-block"
+/>
+
+      <span>+10%</span>
     </div>
-    <div className="!text-[14px] md:!text-[16px] mt-0.5 tabular-nums font-extrabold leading-tight self-end mr-1">
-      {formatShort1(goldCostNow)}
-    </div>
+    <div className="!text-[14px] md:!text-[16px] mt-0.5 tabular-nums font-extrabold leading-tight">
+  {formatShort(goldCostNow)}
+
+</div>
+
   </div>
 </button>
 
