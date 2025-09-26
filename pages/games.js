@@ -97,95 +97,92 @@ export default function GamesHub() {
           </header>
 
           {/* Cards */}
-          <section className="flex justify-center space-x-3 items-stretch">
-            {/* MINERS */}
-            <article className="rounded-2xl border border-white/10 bg-black/30 backdrop-blur-md shadow-xl p-5 flex flex-col max-w-[300px] w-full min-h-[320px]">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="text-xl md:text-2xl font-extrabold">MLEO — Miners</h2>
-                  <p className="text-zinc-300 mt-1 text-sm">
-                    Idle & upgrades with tap gifts and boosts. Vault integration +
-                    on-chain CLAIM for steady, hands-on progress.
-                  </p>
-                </div>
-                <span className="ml-3 mt-1 rounded-full px-2.5 py-1 text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                  Active
-                </span>
-              </div>
+<section className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-3 items-stretch max-w-[900px] mx-auto">
+  {/* MINERS */}
+  <article className="rounded-2xl border border-white/10 bg-black/30 backdrop-blur-md shadow-xl p-5 flex flex-col w-full sm:max-w-[360px] min-h-[300px]">
+    <div className="flex items-start justify-between">
+      <div>
+        <h2 className="text-[20px] sm:text-2xl font-extrabold">MLEO — Miners</h2>
+        <p className="text-[14px] sm:text-sm text-zinc-300 mt-1 leading-6 break-words hyphens-auto">
+          Idle & upgrades with tap gifts and boosts. Vault integration +
+          on-chain CLAIM for steady, hands-on progress.
+        </p>
+      </div>
+      <span className="ml-3 mt-1 rounded-full px-2.5 py-1 text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+        Active
+      </span>
+    </div>
 
-              <div className="mt-auto">
-                {/* Info buttons */}
-                <div className="flex flex-wrap gap-2 mb-3 justify-center">
-                  <button
-                    onClick={() => open("miners-how")}
-                    className="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-xs md:text-sm font-semibold"
-                  >
-                    HOW TO PLAY
-                  </button>
-                  <button
-                    onClick={() => open("miners-terms")}
-                    className="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-xs md:text-sm font-semibold"
-                  >
-                    TERMS
-                  </button>
-                </div>
+    <div className="mt-auto">
+      <div className="flex flex-wrap gap-2 mb-3 justify-center">
+        <button
+          onClick={() => open("miners-how")}
+          className="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-xs sm:text-sm font-semibold"
+        >
+          HOW TO PLAY
+        </button>
+        <button
+          onClick={() => open("miners-terms")}
+          className="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-xs sm:text-sm font-semibold"
+        >
+          TERMS
+        </button>
+      </div>
 
-                {/* Play button */}
-                <div className="border-t border-zinc-800/80 pt-3">
-                  <Link
-                    href="/play"
-                    className="inline-flex w-full items-center justify-center px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold shadow-lg"
-                  >
-                    Play Miners
-                  </Link>
-                </div>
-              </div>
-            </article>
+      <div className="border-t border-zinc-800/80 pt-3">
+        <Link
+          href="/play"
+          className="inline-flex w-full items-center justify-center px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold shadow-lg"
+        >
+          Play Miners
+        </Link>
+      </div>
+    </div>
+  </article>
 
-            {/* TOKEN RUSH */}
-            <article className="rounded-2xl border border-white/10 bg-black/30 backdrop-blur-md shadow-xl p-5 flex flex-col max-w-[300px] w-full min-h-[320px]">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="text-xl md:text-2xl font-extrabold">MLEO — Rush</h2>
-                  <p className="text-zinc-300 mt-1 text-sm">
-                    Passive online mining with automatic offline accrual (time-capped).
-                    Same Vault + CLAIM flow for background gains.
-                  </p>
-                </div>
-                <span className="ml-3 mt-1 rounded-full px-2.5 py-1 text-xs font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30">
-                  Passive
-                </span>
-              </div>
+  {/* TOKEN RUSH */}
+  <article className="rounded-2xl border border-white/10 bg-black/30 backdrop-blur-md shadow-xl p-5 flex flex-col w-full sm:max-w-[360px] min-h-[300px]">
+    <div className="flex items-start justify-between">
+      <div>
+        <h2 className="text-[20px] sm:text-2xl font-extrabold">MLEO — Rush</h2>
+        <p className="text-[14px] sm:text-sm text-zinc-300 mt-1 leading-6 break-words hyphens-auto">
+          Passive online mining with automatic offline accrual (time-capped).
+          Same Vault + CLAIM flow for background gains.
+        </p>
+      </div>
+      <span className="ml-3 mt-1 rounded-full px-2.5 py-1 text-xs font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30">
+        Passive
+      </span>
+    </div>
 
-              <div className="mt-auto">
-                {/* Info buttons */}
-                <div className="flex flex-wrap gap-2 mb-3 justify-center">
-                  <button
-                    onClick={() => open("rush-how")}
-                    className="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-xs md:text-sm font-semibold"
-                  >
-                    HOW TO PLAY
-                  </button>
-                  <button
-                    onClick={() => open("rush-terms")}
-                    className="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-xs md:text-sm font-semibold"
-                  >
-                    TERMS
-                  </button>
-                </div>
+    <div className="mt-auto">
+      <div className="flex flex-wrap gap-2 mb-3 justify-center">
+        <button
+          onClick={() => open("rush-how")}
+          className="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-xs sm:text-sm font-semibold"
+        >
+          HOW TO PLAY
+        </button>
+        <button
+          onClick={() => open("rush-terms")}
+          className="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-xs sm:text-sm font-semibold"
+        >
+          TERMS
+        </button>
+      </div>
 
-                {/* Play button */}
-                <div className="border-t border-zinc-800/80 pt-3">
-                  <Link
-                    href="/rush"
-                    className="inline-flex w-full items-center justify-center px-5 py-3 rounded-xl bg-orange-500 hover:bg-orange-400 text-black font-extrabold shadow-lg"
-                  >
-                    Play Token Rush
-                  </Link>
-                </div>
-              </div>
-            </article>
-          </section>
+      <div className="border-t border-zinc-800/80 pt-3">
+        <Link
+          href="/rush"
+          className="inline-flex w-full items-center justify-center px-5 py-3 rounded-xl bg-orange-500 hover:bg-orange-400 text-black font-extrabold shadow-lg"
+        >
+          Play Token Rush
+        </Link>
+      </div>
+    </div>
+  </article>
+</section>
+
         </div>
       </main>
     </Layout>
