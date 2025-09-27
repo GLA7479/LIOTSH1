@@ -99,7 +99,7 @@ export default function GamesHub() {
           {/* Cards */}
 <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-3 items-stretch max-w-[900px] mx-auto">
   {/* MINERS */}
-  <article className="rounded-2xl border border-white/10 bg-black/30 backdrop-blur-md shadow-xl p-5 flex flex-col w-full sm:max-w-[360px] min-h-[300px]">
+  <article className="rounded-2xl border border-white/5 bg-black/10 backdrop-blur-md shadow-xl p-5 flex flex-col w-full sm:max-w-[360px] min-h-[300px]">
     <div className="flex items-start justify-between">
       <div>
         <h2 className="text-[20px] sm:text-2xl font-extrabold">MLEO — Miners</h2>
@@ -141,7 +141,7 @@ export default function GamesHub() {
   </article>
 
   {/* TOKEN RUSH */}
-  <article className="rounded-2xl border border-white/10 bg-black/30 backdrop-blur-md shadow-xl p-5 flex flex-col w-full sm:max-w-[360px] min-h-[300px]">
+  <article className="rounded-2xl border border-white/5 bg-black/10 backdrop-blur-md shadow-xl p-5 flex flex-col w-full sm:max-w-[360px] min-h-[300px]">
     <div className="flex items-start justify-between">
       <div>
         <h2 className="text-[20px] sm:text-2xl font-extrabold">MLEO — Rush</h2>
