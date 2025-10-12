@@ -10,7 +10,7 @@ const EmailTermsGate = dynamic(() => import("../components/EmailTermsGate"), { s
 
 
 
-const GAME_ENTRY_URL = "/games"; // שנה אם צריך
+const GAME_ENTRY_URL = "/mining"; // שנה אם צריך
 
 // ===== Translations =====
 const TEXT = {
@@ -67,42 +67,6 @@ const TEXT = {
     },
     footer: { terms: "Terms", privacy: "Privacy", docs: "Docs" },
   },
-
-he: {
-  name: "עברית", dir: "rtl", code: "he",
-  new: "חדש", early: "ברוכים הבאים לכורים הראשונים",
-  heroH1_1: "כרה. איחד. הרווח.",
-  heroH1_2: "ברוכים הבאים ל־MLEO Rush.",
-  start: "התחל עכשיו",
-  how: "איך זה עובד",
-  bullets: [
-    "צבירה יומית הוגנת ומוגבלת",
-    "מניעת ניצול ומגבלות רכות",
-    "אפליקציית PWA ניתנת להתקנה",
-  ],
-  slogans: [
-    "רצית לכרות ביטקוין כבר ביום הראשון? התחל היום עם MLEO.",
-    "הקש. איחד. הרווח. הפוך את המשחק ל־MLEO.",
-    "מהמם למכונה — כורים את העתיד עם Leo.",
-    "הנפקה הוגנת. תחרות אמיתית. כיף טהור.",
-    "בלי Gas ובלי בלאגן (דמו). רק לכרות ולהתקדם.",
-    "הצטרף לכורים המוקדמים. קבל את החלק שלך בעידן MLEO.",
-  ],
-  modal: {
-    title: "איך עובדת צבירת ה־MLEO",
-    sections: [
-      { t: "1) מה באמת מרוויחים", p: "‏MLEO הוא טוקן שימושי שנצבר דרך המשחק. תוצאות משחק כשירות עשויות להתמיר ל־MLEO. שיעורי ההמרה משתנים לטובת הוגנות ויציבות." },
-      { t: "2) המרה (בגדול)", p: "רק פעולות מסוימות נספרות. הנוסחאות המדויקות אינן פומביות ועלולות להשתנות." },
-      { t: "3) טווח יומי והוגנות", p: "הצבירה נחלשת בהדרגה ככל שמתקרבים לטווח היומי האישי, כדי למנוע ניצול ולשמור קצב בריא." },
-      { t: "4) Vault ו־CLAIM", p: "אפשר לבצע CLAIM ליתרה אל ה־Vault בתוך האפליקציה. אם ייפתח בהמשך Claim על השרשרת, עשויות לחול חלונות פתיחה ובדיקות זכאות נוספות." },
-      { t: "5) כשאתה לא בסביבה", p: "יש התקדמות מוגבלת גם כשהאפליקציה סגורה, ביעילות מופחתת." },
-      { t: "6) חשוב לדעת", p: "זמינות, שיעורים ותקרות עשויים להשתנות/להיעצר/להתאפס. לא ייעוץ פיננסי; ל־MLEO אין ערך מובטח." },
-    ],
-    cta: "התחל עכשיו",
-    close: "סגור",
-  },
-  footer: { terms: "תנאים", privacy: "פרטיות", docs: "מסמכים" },
-},
 
 
   ar: {
@@ -717,18 +681,55 @@ pt: {
     },
     footer: { terms: "Όροι", privacy: "Απόρρητο", docs: "Έγγραφα" },
   },
+
+he: {
+  name: "עברית", dir: "rtl", code: "he",
+  new: "חדש", early: "ברוכים הבאים לכורים הראשונים",
+  heroH1_1: "כרה. איחד. הרווח.",
+  heroH1_2: "ברוכים הבאים ל־MLEO Rush.",
+  start: "התחל עכשיו",
+  how: "איך זה עובד",
+  bullets: [
+    "צבירה יומית הוגנת ומוגבלת",
+    "מניעת ניצול ומגבלות רכות",
+    "אפליקציית PWA ניתנת להתקנה",
+  ],
+  slogans: [
+    "רצית לכרות ביטקוין כבר ביום הראשון? התחל היום עם MLEO.",
+    "הקש. איחד. הרווח. הפוך את המשחק ל־MLEO.",
+    "מהמם למכונה — כורים את העתיד עם Leo.",
+    "הנפקה הוגנת. תחרות אמיתית. כיף טהור.",
+    "בלי Gas ובלי בלאגן (דמו). רק לכרות ולהתקדם.",
+    "הצטרף לכורים המוקדמים. קבל את החלק שלך בעידן MLEO.",
+  ],
+  modal: {
+    title: "איך עובדת צבירת ה־MLEO",
+    sections: [
+      { t: "1) מה באמת מרוויחים", p: "‏MLEO הוא טוקן שימושי שנצבר דרך המשחק. תוצאות משחק כשירות עשויות להתמיר ל־MLEO. שיעורי ההמרה משתנים לטובת הוגנות ויציבות." },
+      { t: "2) המרה (בגדול)", p: "רק פעולות מסוימות נספרות. הנוסחאות המדויקות אינן פומביות ועלולות להשתנות." },
+      { t: "3) טווח יומי והוגנות", p: "הצבירה נחלשת בהדרגה ככל שמתקרבים לטווח היומי האישי, כדי למנוע ניצול ולשמור קצב בריא." },
+      { t: "4) Vault ו־CLAIM", p: "אפשר לבצע CLAIM ליתרה אל ה־Vault בתוך האפליקציה. אם ייפתח בהמשך Claim על השרשרת, עשויות לחול חלונות פתיחה ובדיקות זכאות נוספות." },
+      { t: "5) כשאתה לא בסביבה", p: "יש התקדמות מוגבלת גם כשהאפליקציה סגורה, ביעילות מופחתת." },
+      { t: "6) חשוב לדעת", p: "זמינות, שיעורים ותקרות עשויים להשתנות/להיעצר/להתאפס. לא ייעוץ פיננסי; ל־MLEO אין ערך מובטח." },
+    ],
+    cta: "התחל עכשיו",
+    close: "סגור",
+  },
+  footer: { terms: "תנאים", privacy: "פרטיות", docs: "מסמכים" },
+},
+
+
 };
 
 // ===== Flags =====
 const FLAGS = {
   en: "🇺🇸",
- he: "🇮🇱",
   ar: "🇸🇦",
   ru: "🇷🇺",
   es: "🇪🇸",
   fr: "🇫🇷",
   de: "🇩🇪",
-   pt: "🇧🇷",
+  pt: "🇧🇷",
   zh: "🇨🇳",
   ja: "🇯🇵",
   ko: "🇰🇷",
@@ -740,6 +741,7 @@ const FLAGS = {
   cs: "🇨🇿",
   nl: "🇳🇱",
   el: "🇬🇷",
+  he: "🇮🇱",
 };
 
 // ===== Helpers =====
@@ -762,6 +764,67 @@ function pickInitialLang() {
     const guess = Object.keys(TEXT).find(k => k.startsWith(nav));
     return guess || "en";
   } catch { return "en"; }
+}
+
+// ===== Language Selector =====
+function LanguageSelector({ lang, setLang }) {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  
+  // Debug: check if flags are loading
+  console.log('Current lang:', lang, 'Flag:', FLAGS[lang]);
+  
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="px-3 py-2 rounded-xl bg-white/10 border border-white/20 hover:bg-white/15 transition text-sm flex items-center gap-2"
+        style={{ fontFamily: "system-ui, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol" }}
+      >
+        <span className="mr-1">{FLAGS[lang] || '🌐'}</span>
+        <span>{TEXT[lang].name}</span>
+        <svg className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      
+      {isOpen && createPortal(
+        <>
+          <div 
+            className="fixed inset-0 bg-black/20"
+            style={{ zIndex: 2147483646 }}
+            onClick={() => setIsOpen(false)} 
+          />
+          <div 
+            className="fixed right-4 top-16 w-52 bg-gray-900 border border-white/20 rounded-xl shadow-2xl overflow-hidden max-h-[400px] overflow-y-auto"
+            style={{ 
+              fontFamily: "system-ui, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol",
+              backdropFilter: "blur(10px)",
+              backgroundColor: "rgba(17, 24, 39, 0.95)",
+              zIndex: 2147483647
+            }}
+          >
+            {ALL.map(opt => (
+              <button
+                key={opt.code}
+                onClick={() => {
+                  setLang(opt.code);
+                  setIsOpen(false);
+                }}
+                className={`w-full px-4 py-3 text-left hover:bg-white/15 transition flex items-center gap-3 text-sm ${
+                  lang === opt.code ? 'bg-white/25 font-bold' : ''
+                }`}
+              >
+                <span className="text-lg mr-2">{FLAGS[opt.code] || '🌐'}</span>
+                <span>{TEXT[opt.code].name}</span>
+              </button>
+            ))}
+          </div>
+        </>,
+        document.body
+      )}
+    </div>
+  );
 }
 
 export default function Home() {
@@ -836,27 +899,13 @@ const [showGate, setShowGate] = useState(false);
 
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Language select */}
-           <select
-  value={lang}
-  onChange={e => setLang(e.target.value)}
-  className="px-3 py-2 rounded-xl bg-white/10 border border-white/20 hover:bg-white/15 transition text-sm"
-  aria-label="Language"
-  dir="ltr"
-  style={{ fontFamily: "system-ui, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol" }}
->
-  {ALL.map(opt => (
-    <option key={opt.code} value={opt.code}>
-      {(FLAGS[opt.code] ? FLAGS[opt.code] + " " : "") + TEXT[opt.code].name}
-    </option>
-  ))}
-</select>
-
+            <LanguageSelector lang={lang} setLang={setLang} />
 
             <PWAInstall />
 
             <button
   onClick={() => setShowGate(true)}
-  className="hidden sm:inline-flex px-4 py-2 rounded-xl bg-yellow-400 text-black font-bold hover:bg-yellow-300 transition"
+  className="hidden sm:inline-flex px-3 py-2 rounded-xl bg-yellow-400 text-black font-bold hover:bg-yellow-300 transition text-sm"
 >
   {t.start}
 </button>

@@ -69,31 +69,34 @@ const S_ROCK  = "/sounds/rock.mp3";
 const S_GIFT  = "/sounds/gift.mp3";
 
 // ==== On-chain Claim (TBNB) config ====
-const CLAIM_CHAIN_ID = Number(process.env.NEXT_PUBLIC_CLAIM_CHAIN_ID || 97); // BSC Testnet
+// BSC Testnet
+const CLAIM_CHAIN_ID = Number(process.env.NEXT_PUBLIC_CLAIM_CHAIN_ID || 97);
 
-// אין כתובת ברירת מחדל! חייבים לספק כתובת חדשה דרך ENV
+// כתובת חוזה ה- V3 (חובה!)
 const CLAIM_ADDRESS = (process.env.NEXT_PUBLIC_MLEO_CLAIM_ADDRESS || process.env.NEXT_PUBLIC_CLAIM_ADDRESS || "").trim();
-const MLEO_DECIMALS  = Number(process.env.NEXT_PUBLIC_MLEO_DECIMALS || 18);
-const CLAIM_FN       = (process.env.NEXT_PUBLIC_MLEO_CLAIM_FN || "claim").toLowerCase();
+const MLEO_DECIMALS = Number(process.env.NEXT_PUBLIC_MLEO_DECIMALS || 18);
 
-function isValidAddress(a){
-  return /^0x[0-9a-fA-F]{40}$/.test(a || "");
-}
+// משחק זה = GameId 1
+const GAME_ID = 1;
 
+function isValidAddress(a){ return /^0x[0-9a-fA-F]{40}$/.test(a || ""); }
 
-const CLAIM_ABI_MAP = {
-  claim:  [{ type:"function", name:"claim",  stateMutability:"nonpayable", inputs:[{name:"amount", type:"uint256"}], outputs:[] }],
-  mint:   [{ type:"function", name:"mint",   stateMutability:"nonpayable", inputs:[{name:"to", type:"address"}, {name:"amount", type:"uint256"}], outputs:[] }],
-  mintto: [{ type:"function", name:"mintTo", stateMutability:"nonpayable", inputs:[{name:"to", type:"address"}, {name:"amount", type:"uint256"}], outputs:[] }],
-};
-const GAME_ID = Number(process.env.NEXT_PUBLIC_GAME_ID || 1);
+// ABI מינימלי של V3: claim(gameId, amount)
+const MINING_CLAIM_ABI = [{
+  type: "function",
+  name: "claim",
+  stateMutability: "nonpayable",
+  inputs: [
+    { name: "gameId", type: "uint256" },
+    { name: "amount", type: "uint256" }
+  ],
+  outputs: []
+}];
 
-
-// אפשר להפעיל עקיפה לטסטנט כדי להתעלם מגייטינג של TGE — רק במודל MINING
+// אפשרות עקיפה לטסטנט (אם השתמשת בזה לשחרור מוקדם; לא נדרש לחתימה)
 const ALLOW_TESTNET_WALLET_FLAG =
   (process.env.NEXT_PUBLIC_ALLOW_TESTNET_WALLET || "").toLowerCase() === "1" ||
   (process.env.NEXT_PUBLIC_ALLOW_TESTNET_WALLET || "").toLowerCase() === "true";
-
 
 
 // ===== Debug helpers =====
@@ -677,7 +680,7 @@ const { disconnect } = useDisconnect();
   const [isDesktop,  setIsDesktop]  = useState(false);
   const [isMobileLandscape, setIsMobileLandscape] = useState(false);
 
-  const [showIntro, setShowIntro] = useState(true);
+  const [showIntro, setShowIntro] = useState(false);
   const [gamePaused, setGamePaused] = useState(true);
   const [showTerms, setShowTerms] = useState(false);
   const [firstTimeNeedsTerms, setFirstTimeNeedsTerms] = useState(false);
@@ -709,6 +712,7 @@ const { disconnect } = useDisconnect();
     vault: 0, claimedTotal: 0, history: []
   });
   const [claiming, setClaiming] = useState(false);
+  const [claimAmount, setClaimAmount] = useState("");
 
   // ====== SFX / MUSIC (נוסף — לא מחליף את ui.muted הקיים של המשחק) ======
   const [sfxMuted, setSfxMuted] = useState(() => {
@@ -744,7 +748,6 @@ const { disconnect } = useDisconnect();
 
   // === PATCH: auto-open "How it works" פעם לסשן ===
   useEffect(() => {
-    if (showIntro) return;
     try {
       const K = "mleo_howitworks_seen";
       if (sessionStorage.getItem(K) !== "1") {
@@ -752,7 +755,8 @@ const { disconnect } = useDisconnect();
         sessionStorage.setItem(K, "1");
       }
     } catch {}
-  }, [showIntro]);
+  }, []);
+
 
   // Check terms status on mount
   useEffect(() => {
@@ -867,13 +871,11 @@ const { disconnect } = useDisconnect();
     setMenuOpen(false);
   }
 
-// === MINING: CLAIM (איסוף כולל → לארנק) ===
-// חשוב: רק הכפתור בתוך מסך MINING עושה "איסוף כולל לארנק".
-// שני כפתורי CLAIM אחרים באפליקציה לא מושפעים.
+// === MINING: CLAIM (איסוף כולל → לארנק) — V3 strict ===
 async function onClaimMined() {
   try { play?.(S_CLICK); } catch {}
 
-  // 0) קודם לאסוף את ה-balance המקומי אל ה-Vault
+  // 0) לאחד balance לתוך vault המקומי לפני איסוף
   try {
     const st0 = loadMiningState();
     const bal = Number((st0?.balance || 0).toFixed(2));
@@ -888,61 +890,58 @@ async function onClaimMined() {
     }
   } catch {}
 
-  // 1) מצב Vault כעת
+  // 1) כמה דורשים מה־Vault
   const st = loadMiningState();
   const vaultNow = Number((st?.vault || 0).toFixed(2));
   if (!vaultNow) { setGiftToastWithTTL("Vault is empty"); return; }
 
-  // 2) חיבור + רשת
+  // 2) ארנק ורשת
   if (!isConnected) { openConnectModal?.(); return; }
   if (chainId !== CLAIM_CHAIN_ID) {
     try { await switchChain?.({ chainId: CLAIM_CHAIN_ID }); }
     catch { setGiftToastWithTTL("Switch to BSC Testnet (TBNB)"); return; }
   }
 
-  // 3) בדיקת כתובת חוזה – חובה ENV תקין
+  // 3) כתובת חוזה
   if (!isValidAddress(CLAIM_ADDRESS)) {
-    setGiftToastWithTTL("Missing/invalid CLAIM address (set NEXT_PUBLIC_MLEO_CLAIM_ADDRESS)");
+    setGiftToastWithTTL("Missing/invalid CLAIM address (NEXT_PUBLIC_MLEO_CLAIM_ADDRESS)");
     return;
   }
 
-  // ABI מינימלי עבור claim(amount)
- const MINING_CLAIM_ABI = [
-  {
-    type: "function",
-    name: "claim",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "gameId", type: "uint256" },
-      { name: "amount", type: "uint256" }
-    ],
-    outputs: []
+  // 4) שליחה — claim(gameId, amountUnits)
+  let toClaim;
+  if (claimAmount && claimAmount.trim() !== "") {
+    toClaim = Math.floor(Number(claimAmount) || 0);
+    if (toClaim <= 0) { 
+      setGiftToastWithTTL("Enter a valid amount"); 
+      return; 
+    }
+    if (toClaim > vaultNow) { 
+      setGiftToastWithTTL(`Not enough balance. Available: ${formatMleoShort(vaultNow)}`); 
+      return; 
+    }
+  } else {
+    toClaim = vaultNow;                           // מספר "אנושי" (יכול לכלול עד 2 ספרות)
   }
-];
+  const amountUnits = parseUnits(
+    Number(toClaim).toFixed(Math.min(2, MLEO_DECIMALS)),
+    MLEO_DECIMALS
+  );
 
-
-  // 4) "הכול עכשיו": מושכים את כל ה-Vault לארנק
-  const toClaim = vaultNow;
   setClaiming(true);
   try {
-    const amountWei = parseUnits(
-      Number(toClaim).toFixed(Math.min(2, MLEO_DECIMALS)),
-      MLEO_DECIMALS
-    );
-
     const hash = await writeContractAsync({
       address: CLAIM_ADDRESS,
-      abi: MINING_CLAIM_ABI,
-      functionName: "claim",
-      args: [BigInt(GAME_ID), amountWei],
-
+      abi: MINING_CLAIM_ABI,         // ← ABI היחיד
+      functionName: "claim",         // ← פונקציה יחידה ב־V3
+      args: [BigInt(GAME_ID), amountUnits],
       chainId: CLAIM_CHAIN_ID,
       account: address,
     });
 
     await publicClient.waitForTransactionReceipt({ hash });
 
-    // 5) עדכון לוקאלי לאחר המשיכה
+    // 5) עדכון לוקאלי
     const after = loadMiningState();
     const delta = Number(toClaim);
     after.vault           = Math.max(0, Number(((after.vault || 0) - delta).toFixed(2)));
@@ -952,6 +951,7 @@ async function onClaimMined() {
     saveMiningState(after);
     setMining(after);
     setCenterPopup?.({ text: `✅ Sent ${formatMleoShort(delta)} MLEO to wallet`, id: Math.random() });
+    setClaimAmount(""); // Reset claim amount after successful claim
   } catch (err) {
     console.error(err);
     setGiftToastWithTTL("Claim failed or rejected");
@@ -1175,19 +1175,34 @@ async function onClaimMinedToWallet() {
  // Back יציאה מפול-סקין + חזרה, עם fallback ל-root
    function backSafe() {
      try { playSfx(S_CLICK); } catch {}
-     const p = document.fullscreenElement
-       ? document.exitFullscreen?.()
-       : Promise.resolve();
-     Promise.resolve(p).finally(() => {
-       // תן לרגע לדפדפן להשתחרר מפול-סקין לפני ניווט
-       setTimeout(() => {
-         if (window.history.length > 1) {
-           try { router.back(); } catch { window.history.back(); }
-         } else {
-           try { router.push("/"); } catch { window.location.href = "/"; }
+     
+     // צא מפול-סקין אם צריך ואז תעביר לדף
+     if (document.fullscreenElement) {
+       document.exitFullscreen?.().then(() => {
+         // רק אחרי שיוצא מפול-סקין, תעביר לדף MINING
+         setTimeout(() => {
+           try {
+             router.push("/mining");
+           } catch {
+             window.location.href = "/mining";
+           }
+         }, 100);
+       }).catch(() => {
+         // אם יציאה מפול-סקין נכשלת, תעביר בכל מקרה
+         try {
+           router.push("/mining");
+         } catch {
+           window.location.href = "/mining";
          }
-       }, 0);
-     });
+       });
+     } else {
+       // אם לא בפול-סקין, תעביר ישירות
+       try {
+         router.push("/mining");
+       } catch {
+         window.location.href = "/mining";
+       }
+     }
    }
    // שמירה על תאימות אם יש קריאות ישנות ל-onBack()
    function onBack(){ backSafe(); }
@@ -1223,6 +1238,20 @@ useEffect(() => {
     dpsMult: init.dpsMult, goldMult: init.goldMult,
   }));
   setGiftReadyFlag(!!init.giftReady);
+
+  // Start game immediately if not already started
+  if (!init.onceSpawned) {
+    spawnMiner(init, 1);
+    init.onceSpawned = true;
+    save();
+  }
+
+  // Enter fullscreen immediately
+  setTimeout(() => {
+    try {
+      enterFullscreenAndLockMobile();
+    } catch {}
+  }, 100);
 
   try {
 // ← החלף את הקטע הכפול בגרסה התקינה:
@@ -1277,7 +1306,7 @@ if ((init.giftNextAt || 0) <= now) {
     const portrait = h >= w, desktop = w >= 1024;
     setIsDesktop(desktop);
     setIsMobileLandscape(!portrait && !desktop);
-    setGamePaused(p => (!portrait && !desktop) ? true : (showIntro ? true : false));
+    setGamePaused(p => (!portrait && !desktop) ? true : false);
   };
   updateFlags();
   window.addEventListener("resize", updateFlags);
@@ -2397,8 +2426,6 @@ function rollGiftType() {
 }
 
 async function enterFullscreenAndLockMobile() { try {
-  const w = window.innerWidth, desktop = w >= 1024;
-  if (desktop) return;
   const el = wrapRef.current;
   if (el?.requestFullscreen) await el.requestFullscreen();
   if (screen.orientation?.lock) { try { await screen.orientation.lock("portrait-primary"); } catch {} }
@@ -2886,68 +2913,6 @@ const BTN_DIS  = "opacity-60 cursor-not-allowed";
           </div>
         )}
 
-        {showIntro && (
-          <div className="absolute inset-0 flex flex-col items-center justify-start pt-10 bg-black/80 z-[50] text-center p-6">
-            <img src="/images/leo-intro.png" alt="Leo" width={160} height={160} className="mb-4 rounded-full" />
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-yellow-400 mb-2">⛏️ MLEO Miners</h1>
-
-            <p className="text-sm sm:text-base text-gray-200 mb-4">Merge miners, break rocks, earn gold.</p>
-
-            {firstTimeNeedsTerms && (
-              <div className="mb-4 w-full max-w-md">
-                <div className="px-3 py-2 rounded-lg bg-yellow-300/20 text-yellow-200 border border-yellow-300/40 text-xs sm:text-sm">
-                  You must read and accept the <b>Terms &amp; Conditions</b> before playing for the first time.
-                </div>
-              </div>
-            )}
-
-            <div className="flex gap-3 flex-wrap justify-center">
-              {/* במסך פתיחה: טוגל חיבור/ניתוק */}
-              <button
-                onClick={toggleWallet}
-                className="px-5 py-3 font-bold rounded-lg text-base shadow bg-indigo-400 hover:bg-indigo-300 text-black"
-              >
-                {isConnected ? "DISCONNECT" : "CONNECT WALLET"}
-              </button>
-
-              <button
-                onClick={async () => {
-                  try { play?.(S_CLICK); } catch {}
-                  if (firstTimeNeedsTerms) { setShowTerms(true); return; }
-                  const s = stateRef.current;
-                  if (s && !s.onceSpawned) { spawnMiner(s, 1); s.onceSpawned = true; save(); }
-                  setShowIntro(false);
-                  setGamePaused(false);
-                  try { await enterFullscreenAndLockMobile(); } catch {}
-                }}
-                className="px-5 py-3 font-bold rounded-lg text-base shadow bg-yellow-400 hover:bg-yellow-300 text-black"
-              >
-                PLAY
-              </button>
-
-              <button
-                onClick={() => setShowHowTo(true)}
-                className="px-5 py-3 font-bold rounded-lg text-base shadow bg-emerald-400 hover:bg-emerald-300 text-black"
-              >
-                HOW TO PLAY
-              </button>
-
-              <button
-                onClick={() => setShowMiningInfo(true)}
-                className="px-5 py-3 font-bold rounded-lg text-base shadow bg-cyan-400 hover:bg-cyan-300 text-black"
-              >
-                MINING
-              </button>
-
-              <button
-                onClick={() => setShowTerms(true)}
-                className="px-5 py-3 font-bold rounded-lg text-base shadow bg-teal-400 hover:bg-teal-300 text-black"
-              >
-                TERMS
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* --- אל תסגור כאן את </div> / </Layout> / );  ---
              המשך PART 9/10 נכנס ישר אחרי זה בתוך אותו wrapper */}
@@ -3982,6 +3947,25 @@ MLEO
 
               {/* Wallet actions */}
               <div className="mb-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
+                {/* Claim Amount Input */}
+                <div className="mb-3">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Claim Amount
+                  </label>
+                  <input
+                    type="number"
+                    value={claimAmount}
+                    onChange={(e) => setClaimAmount(e.target.value)}
+                    placeholder="Enter amount or leave empty for all"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                    min="0"
+                    step="0.01"
+                  />
+                  <div className="text-xs text-slate-500 mt-1">
+                    Available: {formatMleoShort(Number((mining?.vault || 0).toFixed(2)))} MLEO
+                  </div>
+                </div>
+
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <button
                     onClick={() => {

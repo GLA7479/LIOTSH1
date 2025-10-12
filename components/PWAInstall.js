@@ -70,7 +70,7 @@ export default function PWAInstall() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="px-4 py-2 rounded-xl bg-white/10 border border-white/20 hover:bg-white/15 transition"
+        className="px-3 py-2 rounded-xl bg-white/10 border border-white/20 hover:bg-white/15 transition text-sm"
       >
         Install App
       </button>
